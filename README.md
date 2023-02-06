@@ -3,6 +3,14 @@
 This library includes functions that will help save time while working on image processing projects.
 Uses PIP, imageio and numpy
 
+Install steps:
+
+1-) Download and install [Git](https://git-scm.com/downloads)
+
+2-) Run `pip install "git+"https://github.com/EgeEken/ImageProcessing_Ege"` in the terminal
+
+3-) Use `import ImageProcessing_Ege` in a python script or runtime (`import ImageProcessing_Ege as (prefix)` if you don't want to write the whole thing every time)
+
 Current features:
 
 - Open, load and save functionality to edit and create images using the PIL library
