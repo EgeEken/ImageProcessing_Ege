@@ -1,1 +1,1 @@
-import imgpro
+from . import imgpro

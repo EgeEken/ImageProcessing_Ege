@@ -6,6 +6,7 @@ import imageio.v3 as iio3
 import imageio.v2 as iio2
 import math
 import random
+import cv2
 
 def save(img: Image.Image, filename: str, format: str = "PNG") -> None:
     """ ### Saves the PIL.Image.Image object as an image file (PNG by default) with the given name
@@ -182,8 +183,13 @@ def Brighten_color(coef: float, c: tuple) -> tuple:
     r, g, b = c
 
     if coef < 0:
-        return (int(r + r * coef), int(g + g * coef), int(b + b * coef))
-    return (int(r + (255 - r) * coef ), int(g + (255 - g) * coef ), int(b + (255 - b) * coef ))
+        return (int(r + r * coef),
+                int(g + g * coef),
+                int(b + b * coef))
+        
+    return (int(r + (255 - r) * coef ),
+            int(g + (255 - g) * coef ),
+            int(b + (255 - b) * coef ))
 
 def Brighten(coef: float, input: str | np.ndarray | Image.Image) -> Image.Image:
     """### Brightens or darkens the image using the [Brighten](https://www.github.com/EgeEken/Brighten) function
@@ -228,7 +234,9 @@ def Saturate_color(c: tuple, coef: float) -> tuple:
     cmax = max(c)
     
     if coef < 0:
-        return (int(r + (r - cmax) * coef), int(g + (g - cmax) * coef), int(b + (b - cmax) * coef))
+        return (int(r + (r - cmax) * coef),
+                int(g + (g - cmax) * coef),
+                int(b + (b - cmax) * coef))
     
     cmin = min(c)
 
@@ -317,7 +325,7 @@ def Normalize(input: str | np.ndarray | Image.Image) -> np.ndarray:
             res[y, x] = bnw[y, x][0] / 255
     return res
 
-def colorset_create(matrix_img: np.ndarray) -> set:
+def colorset_create(input: np.ndarray | Image.Image | str) -> set:
     """ ### Creates a set of all the different colors in an image matrix
     
     Usage: \n
@@ -326,8 +334,16 @@ def colorset_create(matrix_img: np.ndarray) -> set:
         `colorset = colorset_create(matrix)` \n
         `print(len(colorset)) #for the number of colors` \n
     """
+    matrix = None
+    while matrix == None:
+        if type(input) == str:
+            matrix = matrix_create(open(input))
+        elif type(input) == Image.Image:
+            matrix = matrix_create(input)
+        elif type(input) == np.ndarray:
+            matrix = input
     res = set()
-    for i in matrix_img:
+    for i in matrix:
         res |= set(i)
     return res
 
@@ -358,11 +374,19 @@ def simpler_Normalize(input: str | Image.Image | np.ndarray, colorcount: int) ->
             res[y, x] = closest_normal(matrix[y, x], colorset)
     return res
     
-def array2line(array: np.ndarray) -> str:
-    """ ### Returns a line of text representing the given array
+def array2line(input: np.ndarray | Image.Image | str) -> str:
+    """ ### Returns a line of text representing the given image
     Primary intended use case is for neural networks"""
+    matrix = None
+    while matrix == None:
+        if type(input) == str:
+            matrix = matrix_create(open(input))
+        elif type(input) == Image.Image:
+            matrix = matrix_create(input)
+        elif type(input) == np.ndarray:
+            matrix = input
     res = ""
-    for i in array:
+    for i in matrix:
         for j in i:
             res += str(j)
     return res
@@ -375,6 +399,16 @@ def closest_color(c: tuple, colorset: set | list | np.ndarray) -> tuple:
     for color in colorset:
         dist = distance(c, color)
         if dist < mindist:
+            mindist = dist
+            mincolor = color
+    return mincolor
+
+def closest_color_strict(c: tuple, colorset: set | list | np.ndarray) -> tuple:
+    """ ### Finds the closest color to the given color in the given color set, but only if the colors are not equal"""
+    mindist = 600
+    for color in colorset:
+        dist = distance(c, color)
+        if dist < mindist and dist != 0:
             mindist = dist
             mincolor = color
     return mincolor
@@ -412,9 +446,32 @@ def SimplifyColorV4(colorcount: int, input: str | np.ndarray | Image.Image) -> I
             res[y, x] = closest_color(matrix[y, x], colorset)
     return res
 
+def chain_center(chain: list):
+    """ ### Returns the center of a chain of colors"""
+    return (int(np.mean([chain[i][0] for i in range(len(chain))])),
+            int(np.mean([chain[i][1] for i in range(len(chain))])),
+            int(np.mean([chain[i][2] for i in range(len(chain))])))
+
+def cluster_centers(colorset: set):
+    """ ### Returns the centers of the clusters of colors"""
+    chains = []
+    subchain = set()
+    for i in colorset:
+        if not any(i in sublist for sublist in chains):
+            chaincheck = i
+            while closest_color_strict(colorset, chaincheck) not in subchain and not any(closest_color_strict(colorset, chaincheck) in sublist2 for sublist2 in chains):
+                chaincheck = closest_color_strict(colorset, chaincheck)
+                subchain.add(chaincheck)
+            subchain.add(i)
+            chains.append(subchain)
+            subchain = set()
+    print('Simplified down to', len(chains), 'colors.')
+    chain_centers = [chain_center(chain) for chain in chains]
+    return chain_centers
+
 def Quantize(colorcount: int, input: str | np.ndarray | Image.Image) -> Image.Image:
-    """ ### Applies the [SimplifyColorV4](https://www.github.com/EgeEken/Simplify-Color) algorithm to the given image
-    This program recreates the input image using the given number of colors.
+    """ ### Applies the [SimplifyColor V4](https://www.github.com/EgeEken/Simplify-Color) algorithm to the given image
+    This program recreates the input image using the given number of colors, colors are sampled randomly from the image.
     
     Usage: \n
         `img = open("image.png")` \n
@@ -426,3 +483,89 @@ def Quantize(colorcount: int, input: str | np.ndarray | Image.Image) -> Image.Im
         `save(simplified_5, "simplified_5")` \n
     """
     return SimplifyColorV4(colorcount, input)
+
+def SimplifyColorV5(input: str | np.ndarray | Image.Image, version: int  = 1) -> Image.Image:
+    """ ### Applies the [SimplifyColor V5](https://www.github.com/EgeEken/Simplify-Color) algorithm to the given image
+    This program recreates the input image using less colors, colors are chosen by the chaining algorithm (either version 1 or 2, depending on the version parameter)
+    The complex algorithm causes the program to be more accurate, but also significantly slower.
+    
+    Usage: \n
+        `img = open("image.png")` \n
+        `matrix = matrix_create(img)` \n
+        `simplified_100 = SimplifyColorV5(100, "image.png")` \n
+        `simplified_50 = SimplifyColorV5(50, img)` \n
+        `simplified_10 = SimplifyColorV5(10, matrix)` \n
+        `simplified_5 = SimplifyColorV5(5, simplified_10)` \n
+        `save(simplified_5, "simplified_5")` \n
+    """
+    matrix = None
+    while matrix == None:
+        if type(input) == str:
+            matrix = matrix_create(open(input))
+        elif type(input) == Image.Image:
+            matrix = matrix_create(input)
+        elif type(input) == np.ndarray:
+            matrix = input
+    colorset = cluster_centers(colorset_create(input))
+    width = matrix.shape[1]
+    height = matrix.shape[0]
+    res = PIL.Image.new(mode = "RGB", size = (width, height), color = (255, 255, 255))
+    for x in range(width):
+        for y in range(height):
+            res[y, x] = closest_color(matrix[y, x], colorset)
+    return res
+
+def ReadVideo(filename: str) -> list:
+    """ ### Reads a video file and returns a list of frames"""
+    cap = cv2.VideoCapture(filename)
+    res = []
+    while True:
+        ret, frame = cap.read()
+        if ret:
+            res.append(frame)
+        else:
+            break
+    return res
+
+def WriteVideo(filename: str, frames: list, fps: int, extension: str = 'mp4', format: str = "mp4v"):
+    """ ### Writes a list of frames to a video file"""
+    size = frames[0].shape[:2]
+    if filename[-3:] == extension:
+        out = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*format), fps, size)
+    else:
+        out = cv2.VideoWriter(filename + "." + extension, cv2.VideoWriter_fourcc(*format), fps, size)
+    for i in range(len(frames)):
+        out.write(frames[i])
+    out.release()
+
+def cv2_to_matrix(cv2_img: np.ndarray) -> np.ndarray:
+    """ ### Converts a cv2 image to a matrix with tuples as elements instead of uint8 arrays"""
+    res = np.zeros((cv2_img.shape[0], cv2_img.shape[1]), dtype = tuple)
+    for i in range(cv2_img.shape[0]):
+        for j in range(cv2_img.shape[1]):
+            res[i, j] = tuple(cv2_img[i, j])
+    return res
+
+def cv2_video_to_matrix(cv2_video: list) -> np.ndarray:
+    """ ### Converts a cv2 video to a matrix with tuples as elements instead of uint8 arrays"""
+    res = np.zeros((len(cv2_video), cv2_video[0].shape[0], cv2_video[0].shape[1]), dtype = tuple)
+    for i in range(len(cv2_video)):
+        res[i] = cv2_to_matrix(cv2_video[i])
+    return res
+
+def matrix_to_cv2(matrix: np.ndarray) -> np.ndarray:
+    """ ### Converts a matrix with tuples as elements to a cv2 image"""
+    res = np.zeros((matrix.shape[0], matrix.shape[1], 3), dtype = np.uint8)
+    for i in range(matrix.shape[0]):
+        for j in range(matrix.shape[1]):
+            for k in range(3):
+                res[i, j, k] = matrix[i, j][k].astype(np.uint8)
+    return res
+
+def matrix_to_cv2_video(matrix_video: np.ndarray) -> list:
+    """ ### Converts a matrix with tuples as elements to a cv2 video"""
+    res = []
+    for i in range(matrix_video.shape[0]):
+        res.append(matrix_to_cv2(matrix_video[i]))
+    return res
+
