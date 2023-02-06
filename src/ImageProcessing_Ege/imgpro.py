@@ -5,6 +5,7 @@ import numpy as np
 import imageio.v3 as iio3
 import imageio.v2 as iio2
 import math
+import random
 
 def save(img: Image.Image, filename: str, format: str = "PNG") -> None:
     """ ### Saves the PIL.Image.Image object as an image file (PNG by default) with the given name
@@ -173,7 +174,7 @@ def Simplify(threshold: float, input: str | np.ndarray | Image.Image) -> Image.I
 
 def Brighten_color(coef: float, c: tuple) -> tuple:
     if coef == 0:
-        return input
+        return c
     elif coef > 1:
         coef = 1
     elif coef < -1:
@@ -191,8 +192,10 @@ def Brighten(coef: float, input: str | np.ndarray) -> Image.Image:
     
     Usage: \n
         `img = open("image.png")` \n
+        `matrix = matrix_create(img)` \n
         `brightened_50 = Brighten(0.5, "image.png")` \n
-        `darkened_50 = Brighten(-0.5, "image.png")` \n
+        `same_0 = Brighten(0, img)` \n
+        `darkened_50 = Brighten(-0.5, matrix)` \n
     """
     matrix = None
     while matrix == None:
@@ -213,3 +216,149 @@ def Brighten(coef: float, input: str | np.ndarray) -> Image.Image:
         for y in range(height):
             res[y, x] = Brighten_color(coef, matrix[y, x])
     return res
+
+def Saturate_color(c: tuple, coef: float) -> tuple:
+    if coef == 0:
+        return c
+    if coef > 1:
+        coef = 1
+    if coef < -1:
+        coef = -1
+    r, g, b = c
+    cmax = max(c)
+    
+    if coef < 0:
+        return (int(r + (r - cmax) * coef), int(g + (g - cmax) * coef), int(b + (b - cmax) * coef))
+    
+    cmin = min(c)
+
+    if r == cmax:
+        rmin = cmax
+    elif r == cmin:
+        rmin = 0
+    else:
+        rmin = 2*r - cmax
+    
+    if g == cmax:
+        gmin = cmax
+    elif g == cmin:
+        gmin = 0
+    else:
+        gmin = 2*g - cmax
+
+    if b == cmax:
+        bmin = cmax
+    elif b == cmin:
+        bmin = 0
+    else:
+        bmin = 2*b - cmax
+
+    rchange = (r - rmin) * coef
+    gchange = (g - gmin) * coef
+    bchange = (b - bmin) * coef
+    return (int(r - rchange), int(g - gchange), int(b - bchange))
+
+def Saturate(coef: float, input: str | np.ndarray) -> Image.Image:
+    """ ### Saturates or desaturates the given color using the [Saturate](https://www.github.com/EgeEken/Saturate) function
+    
+    A coefficient of -1 would make the image black and white, and a coefficient of 1 would maximize the saturation
+    
+    Usage: \n
+        `img = open("image.png")` \n
+        `matrix = matrix_create(img)` \n
+        `saturated_50 = Saturate(matrix, 0.5)` \n
+        `desaturated_50 = Saturate(matrix, -0.5)` \n    
+    """
+    matrix = None
+    while matrix == None:
+        if type(input) == str:
+            matrix = matrix_create(open(input))
+        elif type(input) == Image.Image:
+            matrix = matrix_create(input)
+        elif type(input) == np.ndarray:
+            matrix = input
+    if coef > 1:
+        print("Warning: Coefficient is greater than 1, setting it to 1")
+    if coef < -1:
+        print("Warning: Coefficient is less than -1, setting it to -1")
+    width = matrix.shape[1]
+    height = matrix.shape[0]
+    res = PIL.Image.new(mode = "RGB", size = (width, height), color = (255, 255, 255))
+    for x in range(width):
+        for y in range(height):
+            res[y, x] = Saturate_color(coef, matrix[y, x])
+    return res
+
+def colorset_create(matrix_img: np.ndarray) -> set:
+    """ ### Creates a set of all the different colors in an image matrix
+    
+    Usage: \n
+        `img = open("image.png")` \n
+        `matrix = matrix_create(img)` \n
+        `colorset = colorset_create(matrix)` \n
+        `print(len(colorset)) #for the number of colors` \n
+    """
+    res = set()
+    for i in matrix_img:
+        res |= set(i)
+    return res
+
+def closest_color(c: tuple, colorset: set | list | np.ndarray) -> tuple:
+    """ ### Finds the closest color to the given color in the given color set"""
+    if c in colorset:
+        return c
+    mindist = 600
+    for color in colorset:
+        dist = distance(c, color)
+        if dist < mindist:
+            mindist = dist
+            mincolor = color
+    return mincolor
+    
+def SimplifyColorV4(colorcount: int, input: str | np.ndarray | Image.Image) -> Image.Image:
+    """ ### Applies the [SimplifyColorV4](https://www.github.com/EgeEken/Simplify-Color) algorithm to the given image
+    This program recreates the input image using the given number of colors.
+    
+    Usage: \n
+        `img = open("image.png")` \n
+        `matrix = matrix_create(img)` \n
+        `simplified_100 = SimplifyColorV4(100, "image.png")` \n
+        `simplified_50 = SimplifyColorV4(50, img)` \n
+        `simplified_10 = SimplifyColorV4(10, matrix)` \n
+        `simplified_5 = SimplifyColorV4(5, simplified_10)` \n
+        `save(simplified_5, "simplified_5")` \n
+    """
+    matrix = None
+    while matrix == None:
+        if type(input) == str:
+            matrix = matrix_create(open(input))
+        elif type(input) == Image.Image:
+            matrix = matrix_create(input)
+        elif type(input) == np.ndarray:
+            matrix = input
+    if colorcount < 1:
+        print("Warning: Color count is smaller than 1, setting it to 1")
+        colorcount = 1
+    colorset = np.random.choice(colorset_create(matrix), colorcount)
+    width = matrix.shape[1]
+    height = matrix.shape[0]
+    res = PIL.Image.new(mode = "RGB", size = (width, height), color = (255, 255, 255))
+    for x in range(width):
+        for y in range(height):
+            res[y, x] = closest_color(matrix[y, x], colorset)
+    return res
+
+def Quantize(colorcount: int, input: str | np.ndarray | Image.Image) -> Image.Image:
+    """ ### Applies the [SimplifyColorV4](https://www.github.com/EgeEken/Simplify-Color) algorithm to the given image
+    This program recreates the input image using the given number of colors.
+    
+    Usage: \n
+        `img = open("image.png")` \n
+        `matrix = matrix_create(img)` \n
+        `simplified_100 = SimplifyColorV4(100, "image.png")` \n
+        `simplified_50 = SimplifyColorV4(50, img)` \n
+        `simplified_10 = SimplifyColorV4(10, matrix)` \n
+        `simplified_5 = SimplifyColorV4(5, simplified_10)` \n
+        `save(simplified_5, "simplified_5")` \n
+    """
+    return SimplifyColorV4(colorcount, input)
