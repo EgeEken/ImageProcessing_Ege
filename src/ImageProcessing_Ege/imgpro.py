@@ -185,7 +185,7 @@ def Brighten_color(coef: float, c: tuple) -> tuple:
         return (int(r + r * coef), int(g + g * coef), int(b + b * coef))
     return (int(r + (255 - r) * coef ), int(g + (255 - g) * coef ), int(b + (255 - b) * coef ))
 
-def Brighten(coef: float, input: str | np.ndarray) -> Image.Image:
+def Brighten(coef: float, input: str | np.ndarray | Image.Image) -> Image.Image:
     """### Brightens or darkens the image using the [Brighten](https://www.github.com/EgeEken/Brighten) function
     
     A coefficient of -1 would make the image completely black, while a coefficient of 1 would make the image completely white
@@ -258,7 +258,7 @@ def Saturate_color(c: tuple, coef: float) -> tuple:
     bchange = (b - bmin) * coef
     return (int(r - rchange), int(g - gchange), int(b - bchange))
 
-def Saturate(coef: float, input: str | np.ndarray) -> Image.Image:
+def Saturate(coef: float, input: str | np.ndarray | Image.Image) -> Image.Image:
     """ ### Saturates or desaturates the given color using the [Saturate](https://www.github.com/EgeEken/Saturate) function
     
     A coefficient of -1 would make the image black and white, and a coefficient of 1 would maximize the saturation
@@ -289,6 +289,34 @@ def Saturate(coef: float, input: str | np.ndarray) -> Image.Image:
             res[y, x] = Saturate_color(coef, matrix[y, x])
     return res
 
+def BnW(input: str | np.ndarray | Image.Image) -> Image.Image:
+    """ ### Converts the image to black and white using the [Saturate](https://www.github.com/EgeEken/Saturate) function
+    
+    Usage: \n
+        `img = open("image.png")` \n
+        `matrix = matrix_create(img)` \n
+        `black_and_white1 = BnW("image.png")` \n
+        `black_and_white2 = BnW(matrix)` \n
+        `black_and_white3 = BnW(img)` \n
+    """
+    return Saturate(-1, input)
+
+def Normalize(input: str | np.ndarray | Image.Image) -> np.ndarray:
+    """ ### Converts the image to black and white, returns a matrix of floats between 0 and 1, where 0 is black and 1 is white
+    Primary intended use case is for neural networks
+    
+    Usage: \n
+        `img = open("image.png")` \n
+        `normalized = Normalize(img)` \n
+        `print(normalized[0, 0]) #for the value of the top left pixel between 0 and 1` \n
+    """
+    bnw = BnW(input)
+    res = np.zeros(bnw.shape, dtype=float)
+    for x in range(bnw.shape[1]):
+        for y in range(bnw.shape[0]):
+            res[y, x] = bnw[y, x][0] / 255
+    return res
+
 def colorset_create(matrix_img: np.ndarray) -> set:
     """ ### Creates a set of all the different colors in an image matrix
     
@@ -303,6 +331,42 @@ def colorset_create(matrix_img: np.ndarray) -> set:
         res |= set(i)
     return res
 
+def closest_normal(c: float, normalset: set | np.ndarray) -> float:
+    """ ### Finds the closest color to the given color in the given color set, both using normalized values between 1 and 0"""
+    if c in normalset:
+        return c
+    if type(normalset) == set:
+        normalset = list(normalset)
+    array = np.array(normalset)
+    idx = (np.abs(array - c)).argmin()
+    return array[idx]
+
+def simpler_Normalize(input: str | Image.Image | np.ndarray, colorcount: int) -> np.ndarray:
+    """ ### Returns a matrix of floats between 0 and 1, where 0 is black and 1 is white
+    Primary intended use case is for neural networks
+    
+    Usage: \n
+        `img = open("image.png")` \n
+        `normalized = simpler_Normalize(img, 4)` \n
+        `print(normalized[0, 0]) #for the value of the top left pixel, will be either 0.0, 0.25, 0.5, 0.75 or 1.0` \n
+    """
+    matrix = Normalize(input)
+    colorset = set(np.arange(0, 1, 1 / (colorcount - 1))) | {1}
+    res = np.zeros(matrix.shape, dtype=float)
+    for x in range(matrix.shape[1]):
+        for y in range(matrix.shape[0]):
+            res[y, x] = closest_normal(matrix[y, x], colorset)
+    return res
+    
+def array2line(array: np.ndarray) -> str:
+    """ ### Returns a line of text representing the given array
+    Primary intended use case is for neural networks"""
+    res = ""
+    for i in array:
+        for j in i:
+            res += str(j)
+    return res
+    
 def closest_color(c: tuple, colorset: set | list | np.ndarray) -> tuple:
     """ ### Finds the closest color to the given color in the given color set"""
     if c in colorset:
