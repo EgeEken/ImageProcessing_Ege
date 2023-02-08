@@ -30,7 +30,7 @@ def save(img: Image.Image, filename: str, format: str = "PNG") -> None:
         img.save(filename + "." + format.lower(), format)
 
 def open(filename: str) -> Image.Image:
-    """ ### Opens an image file using PIL (Python Image Library) allowing you to iterate through the pixels in it
+    """ ### Opens an image file using PIL (Python Image Library)
     Returns a PIL.Image.Image object
     
     Usage: \n
@@ -52,7 +52,7 @@ def open(filename: str) -> Image.Image:
         print("File not found.")
         
 def load(image: Image.Image) -> Image.Image.load:
-    """ ### Loads the PIL.Image.Image object that you can create using the open() function, allowing you to edit the pixels in it
+    """ ### Loads the PIL.Image.Image object that you can create using the open() function, allowing you to iterate through and edit the pixels in it
     Returns a PIL.Image.Image.load object
     \n
     Usage: \n
@@ -86,12 +86,13 @@ def matrix_create(img: Image.Image) -> np.ndarray:
         `matrix = matrix_create(img)` \n
     """
     img_colors = img.convert('RGB')
+    loaded = load(img_colors)
     width = img.size[0]
     height = img.size[1]
-    res = np.zeros(height,width)
+    res = np.zeros((height,width))
     for x in range(width):
         for y in range(height):
-            res[y, x] = img_colors[x,y]
+            res[y, x] = loaded[x,y]
     return res
 
 def around(matrix: np.ndarray, x: int, y: int) -> list:
@@ -137,7 +138,7 @@ def create_contrast_matrix(matrix: np.ndarray) -> np.ndarray:
     """
     width = matrix.shape[1]
     height = matrix.shape[0]
-    res = np.zeros(height, width)
+    res = np.zeros((height,width))
     for x in range(width):
         for y in range(height):
             res[y, x] = check_contrast(matrix, x, y)
@@ -156,14 +157,12 @@ def Simplify(threshold: float, input: str | np.ndarray | Image.Image) -> Image.I
         `simplified_200 = Simplify(200, matrix)` \n	
         `simplified_100 = Simplify(100, contrast_matrix)` \n
     """
-    contrastmatrix = None
-    while contrastmatrix == None:
-        if type(input) == str:
-            contrastmatrix = create_contrast_matrix(matrix_create(open(input)))
-        elif type(input) == Image.Image:
-            contrastmatrix = create_contrast_matrix(matrix_create(input))
-        elif type(input) == np.ndarray:
-            contrastmatrix = create_contrast_matrix(input)
+    if type(input) == str:
+        contrastmatrix = create_contrast_matrix(matrix_create(open(input)))
+    elif type(input) == Image.Image:
+        contrastmatrix = create_contrast_matrix(matrix_create(input))
+    elif type(input) == np.ndarray:
+        contrastmatrix = create_contrast_matrix(input)
     width = contrastmatrix.shape[1]
     height = contrastmatrix.shape[0]
     res = PIL.Image.new(mode = "RGB", size = (width, height), color = (255, 255, 255))
@@ -203,14 +202,12 @@ def Brighten(coef: float, input: str | np.ndarray | Image.Image) -> Image.Image:
         `same_0 = Brighten(0, img)` \n
         `darkened_50 = Brighten(-0.5, matrix)` \n
     """
-    matrix = None
-    while matrix == None:
-        if type(input) == str:
-            matrix = matrix_create(open(input))
-        elif type(input) == Image.Image:
-            matrix = matrix_create(input)
-        elif type(input) == np.ndarray:
-            matrix = input
+    if type(input) == str:
+        matrix = matrix_create(open(input))
+    elif type(input) == Image.Image:
+        matrix = matrix_create(input)
+    elif type(input) == np.ndarray:
+        matrix = input
     if coef > 1:
         print("Warning: Coefficient is greater than 1, setting it to 1")
     if coef < -1:
@@ -277,14 +274,12 @@ def Saturate(coef: float, input: str | np.ndarray | Image.Image) -> Image.Image:
         `saturated_50 = Saturate(matrix, 0.5)` \n
         `desaturated_50 = Saturate(matrix, -0.5)` \n    
     """
-    matrix = None
-    while matrix == None:
-        if type(input) == str:
-            matrix = matrix_create(open(input))
-        elif type(input) == Image.Image:
-            matrix = matrix_create(input)
-        elif type(input) == np.ndarray:
-            matrix = input
+    if type(input) == str:
+        matrix = matrix_create(open(input))
+    elif type(input) == Image.Image:
+        matrix = matrix_create(input)
+    elif type(input) == np.ndarray:
+        matrix = input
     if coef > 1:
         print("Warning: Coefficient is greater than 1, setting it to 1")
     if coef < -1:
@@ -334,14 +329,12 @@ def colorset_create(input: np.ndarray | Image.Image | str) -> set:
         `colorset = colorset_create(matrix)` \n
         `print(len(colorset)) #for the number of colors` \n
     """
-    matrix = None
-    while matrix == None:
-        if type(input) == str:
-            matrix = matrix_create(open(input))
-        elif type(input) == Image.Image:
-            matrix = matrix_create(input)
-        elif type(input) == np.ndarray:
-            matrix = input
+    if type(input) == str:
+        matrix = matrix_create(open(input))
+    elif type(input) == Image.Image:
+        matrix = matrix_create(input)
+    elif type(input) == np.ndarray:
+        matrix = input
     res = set()
     for i in matrix:
         res |= set(i)
@@ -377,14 +370,12 @@ def simpler_Normalize(input: str | Image.Image | np.ndarray, colorcount: int) ->
 def array2line(input: np.ndarray | Image.Image | str) -> str:
     """ ### Returns a line of text representing the given image
     Primary intended use case is for neural networks"""
-    matrix = None
-    while matrix == None:
-        if type(input) == str:
-            matrix = matrix_create(open(input))
-        elif type(input) == Image.Image:
-            matrix = matrix_create(input)
-        elif type(input) == np.ndarray:
-            matrix = input
+    if type(input) == str:
+        matrix = matrix_create(open(input))
+    elif type(input) == Image.Image:
+        matrix = matrix_create(input)
+    elif type(input) == np.ndarray:
+        matrix = input
     res = ""
     for i in matrix:
         for j in i:
@@ -426,14 +417,12 @@ def SimplifyColorV4(colorcount: int, input: str | np.ndarray | Image.Image) -> I
         `simplified_5 = SimplifyColorV4(5, simplified_10)` \n
         `save(simplified_5, "simplified_5")` \n
     """
-    matrix = None
-    while matrix == None:
-        if type(input) == str:
-            matrix = matrix_create(open(input))
-        elif type(input) == Image.Image:
-            matrix = matrix_create(input)
-        elif type(input) == np.ndarray:
-            matrix = input
+    if type(input) == str:
+        matrix = matrix_create(open(input))
+    elif type(input) == Image.Image:
+        matrix = matrix_create(input)
+    elif type(input) == np.ndarray:
+        matrix = input
     if colorcount < 1:
         print("Warning: Color count is smaller than 1, setting it to 1")
         colorcount = 1
@@ -484,9 +473,9 @@ def Quantize(colorcount: int, input: str | np.ndarray | Image.Image) -> Image.Im
     """
     return SimplifyColorV4(colorcount, input)
 
-def SimplifyColorV5(input: str | np.ndarray | Image.Image, version: int  = 1) -> Image.Image:
+def SimplifyColorV5(input: str | np.ndarray | Image.Image) -> Image.Image:
     """ ### Applies the [SimplifyColor V5](https://www.github.com/EgeEken/Simplify-Color) algorithm to the given image
-    This program recreates the input image using less colors, colors are chosen by the chaining algorithm (either version 1 or 2, depending on the version parameter)
+    This program recreates the input image using less colors, colors are chosen by the chaining algorithm
     The complex algorithm causes the program to be more accurate, but also significantly slower.
     
     Usage: \n
@@ -498,14 +487,12 @@ def SimplifyColorV5(input: str | np.ndarray | Image.Image, version: int  = 1) ->
         `simplified_5 = SimplifyColorV5(5, simplified_10)` \n
         `save(simplified_5, "simplified_5")` \n
     """
-    matrix = None
-    while matrix == None:
-        if type(input) == str:
-            matrix = matrix_create(open(input))
-        elif type(input) == Image.Image:
-            matrix = matrix_create(input)
-        elif type(input) == np.ndarray:
-            matrix = input
+    if type(input) == str:
+        matrix = matrix_create(open(input))
+    elif type(input) == Image.Image:
+        matrix = matrix_create(input)
+    elif type(input) == np.ndarray:
+        matrix = input
     colorset = cluster_centers(colorset_create(input))
     width = matrix.shape[1]
     height = matrix.shape[0]
