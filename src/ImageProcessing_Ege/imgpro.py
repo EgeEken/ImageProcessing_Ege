@@ -40,12 +40,12 @@ def PIL_open(filename: str) -> Image.Image:
     """
     try:
         if filename.endswith(".png") or filename.endswith(".jpg"):
-            res = Image.PIL_open(filename)
+            res = Image.open(filename)
         else:
             try:
-                res = Image.PIL_open(filename + ".png")
+                res = Image.open(filename + ".png")
             except FileNotFoundError:
-                res = Image.PIL_open(filename + ".jpg")
+                res = Image.open(filename + ".jpg")
         return res
     except FileNotFoundError:
         print("File not found.")
