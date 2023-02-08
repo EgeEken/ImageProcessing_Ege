@@ -89,7 +89,7 @@ def matrix_create(img: Image.Image) -> np.ndarray:
     loaded = load(img_colors)
     width = img.size[0]
     height = img.size[1]
-    res = np.zeros((height,width))
+    res = np.zeros((height,width), dtype=tuple)
     for x in range(width):
         for y in range(height):
             res[y, x] = loaded[x,y]
