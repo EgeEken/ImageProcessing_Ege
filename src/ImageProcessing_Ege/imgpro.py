@@ -5,17 +5,18 @@ import numpy as np
 import math
 import random
 import cv2
+import os
 
-def save(img: Image.Image, filename: str, format: str = "PNG") -> None:
+def PIL_save(img: Image.Image, filename: str, format: str = "PNG") -> None:
     """ ### Saves the PIL.Image.Image object as an image file (PNG by default) with the given name
     
     Usage: \n
-        `img = open("image.png")` \n
-        `var = load(img) ` \n
+        `img = PIL_open("image.png")` \n
+        `var = PIL_load(img) ` \n
         `var[20, 10] = (255, 0, 0) `\n
-        `save(img, "image_edited1")  ` \n
-        `save(img, "image_edited2.jpg")` \n
-        `save(img, "image_edited3", "JPG")` \n
+        `PIL_save(img, "image_edited1")  ` \n
+        `PIL_save(img, "image_edited2.jpg")` \n
+        `PIL_save(img, "image_edited3", "JPG")` \n
         `This will change the pixel at (20, 10) to red and save the image as image_edited*.png ` \n
     
     You can check the [PIL documentation](https://pillow.readthedocs.io/en/stable/reference/Image.html) for more info 
@@ -27,37 +28,37 @@ def save(img: Image.Image, filename: str, format: str = "PNG") -> None:
     else:
         img.save(filename + "." + format.lower(), format)
 
-def open(filename: str) -> Image.Image:
+def PIL_open(filename: str) -> Image.Image:
     """ ### Opens an image file using PIL (Python Image Library)
     Returns a PIL.Image.Image object
     
     Usage: \n
-        `img1 = open("image.png")` \n
-        `img2 = open("image")` \n
+        `img1 = PIL_open("image.png")` \n
+        `img2 = PIL_open("image")` \n
         
     You can check the [PIL documentation](https://pillow.readthedocs.io/en/stable/reference/Image.html) for more info 
     """
     try:
         if filename.endswith(".png") or filename.endswith(".jpg"):
-            res = Image.open(filename)
+            res = Image.PIL_open(filename)
         else:
             try:
-                res = Image.open(filename + ".png")
+                res = Image.PIL_open(filename + ".png")
             except FileNotFoundError:
-                res = Image.open(filename + ".jpg")
+                res = Image.PIL_open(filename + ".jpg")
         return res
     except FileNotFoundError:
         print("File not found.")
         
-def load(image: Image.Image) -> Image.Image.load:
-    """ ### Loads the PIL.Image.Image object that you can create using the open() function, allowing you to iterate through and edit the pixels in it
+def PIL_load(image: Image.Image) -> Image.Image.load:
+    """ ### Loads the PIL.Image.Image object that you can create using the PIL_open() function, allowing you to iterate through and edit the pixels in it
     Returns a PIL.Image.Image.load object
     \n
     Usage: \n
-        `img = open("image.png")` \n
-        `var = load(img) ` \n
+        `img = PIL_open("image.png")` \n
+        `var = PIL_load(img) ` \n
         `var[20, 10] = (255, 0, 0) `\n
-        `save(img, "image_edited")  ` \n
+        `PIL_save(img, "image_edited")  ` \n
         ` # This will change the pixel at (20, 10) to red and save the image as image_edited.png ` \n
         
     You can check the [PIL documentation](https://pillow.readthedocs.io/en/stable/reference/Image.html) for more info 
@@ -69,7 +70,7 @@ def distance(c1: tuple, c2: tuple) -> float:
     Returns a float
     Usage: \n
         `distance((30, 0, 0), (0, 40, 0)) == 50` \n
-        `img = open("image.png")` \n
+        `img = PIL_open("image.png")` \n
         `img_colors = img.convert("RGB") ` \n
         `distance(img_colors[0, 0], img_colors[1, 1])` \n
     """
@@ -80,11 +81,11 @@ def distance(c1: tuple, c2: tuple) -> float:
 def matrix_create(img: Image.Image) -> np.ndarray:
     """ ### Returns a numpy array of the image for faster processing
     Usage: \n
-        `img = open("image.png")` \n
+        `img = PIL_open("image.png")` \n
         `matrix = matrix_create(img)` \n
     """
     img_colors = img.convert('RGB')
-    loaded = load(img_colors)
+    loaded = PIL_load(img_colors)
     width = img.size[0]
     height = img.size[1]
     res = np.zeros((height,width), dtype=tuple)
@@ -96,7 +97,7 @@ def matrix_create(img: Image.Image) -> np.ndarray:
 def around(matrix: np.ndarray, x: int, y: int) -> list:
     """ ### Checks around matrix[y, x] and returns a list of the color values of the pixels around it
     Usage: \n
-        `img = open("image.png")` \n
+        `img = PIL_open("image.png")` \n
         `matrix = matrix_create(img)` \n
         `around(matrix, 10, 10)` \n
     """
@@ -114,7 +115,7 @@ def check_contrast(matrix: np.ndarray, x: int, y: int) -> float:
     Calculated as the sum of the distance between the pixel and its neighbors
     
     Usage: \n
-        `img = open("image.png")` \n
+        `img = PIL_open("image.png")` \n
         `matrix = matrix_create(img)` \n
         `check_contrast(matrix, 10, 10)` \n
     """
@@ -130,7 +131,7 @@ def create_contrast_matrix(matrix: np.ndarray) -> np.ndarray:
     """ ### Returns a matrix of the contrast values of the pixels in the given matrix
     
     Usage: \n
-        `img = open("image.png")` \n
+        `img = PIL_open("image.png")` \n
         `matrix = matrix_create(img)` \n
         `contrast_matrix = create_contrast_matrix(matrix)` \n
     """
@@ -147,7 +148,7 @@ def Simplify(threshold: float, input: str | np.ndarray | Image.Image) -> Image.I
     This results in a image with only black and white pixels, black pixels being the ones in high contrast points
     
     Usage: \n
-        `img = open("image.png")` \n
+        `img = PIL_open("image.png")` \n
         `matrix = matrix_create(img)` \n
         `contrast_matrix = create_contrast_matrix(matrix)` \n
         `simplified_400 = Simplify(400, "image.png")` \n
@@ -156,7 +157,7 @@ def Simplify(threshold: float, input: str | np.ndarray | Image.Image) -> Image.I
         `simplified_100 = Simplify(100, contrast_matrix)` \n
     """
     if type(input) == str:
-        contrastmatrix = create_contrast_matrix(matrix_create(open(input)))
+        contrastmatrix = create_contrast_matrix(matrix_create(PIL_open(input)))
     elif type(input) == Image.Image:
         contrastmatrix = create_contrast_matrix(matrix_create(input))
     elif type(input) == np.ndarray:
@@ -164,7 +165,7 @@ def Simplify(threshold: float, input: str | np.ndarray | Image.Image) -> Image.I
     width = contrastmatrix.shape[1]
     height = contrastmatrix.shape[0]
     res = PIL.Image.new(mode = "RGB", size = (width, height), color = (255, 255, 255))
-    res_pixels = load(res.convert("RGB"))
+    res_pixels = PIL_load(res.convert("RGB"))
     for x in range(width):
         for y in range(height):
             if contrastmatrix[y, x] > threshold:
@@ -195,14 +196,14 @@ def Brighten(coef: float, input: str | np.ndarray | Image.Image) -> Image.Image:
     A coefficient of -1 would make the image completely black, while a coefficient of 1 would make the image completely white
     
     Usage: \n
-        `img = open("image.png")` \n
+        `img = PIL_open("image.png")` \n
         `matrix = matrix_create(img)` \n
         `brightened_50 = Brighten(0.5, "image.png")` \n
         `same_0 = Brighten(0, img)` \n
         `darkened_50 = Brighten(-0.5, matrix)` \n
     """
     if type(input) == str:
-        matrix = matrix_create(open(input))
+        matrix = matrix_create(PIL_open(input))
     elif type(input) == Image.Image:
         matrix = matrix_create(input)
     elif type(input) == np.ndarray:
@@ -214,7 +215,7 @@ def Brighten(coef: float, input: str | np.ndarray | Image.Image) -> Image.Image:
     width = matrix.shape[1]
     height = matrix.shape[0]
     res = PIL.Image.new(mode = "RGB", size = (width, height), color = (255, 255, 255))
-    res_pixels = load(res.convert("RGB"))
+    res_pixels = PIL_load(res.convert("RGB"))
     for x in range(width):
         for y in range(height):
             res_pixels[y, x] = Brighten_color(coef, matrix[y, x])
@@ -269,13 +270,13 @@ def Saturate(coef: float, input: str | np.ndarray | Image.Image) -> Image.Image:
     A coefficient of -1 would make the image black and white, and a coefficient of 1 would maximize the saturation
     
     Usage: \n
-        `img = open("image.png")` \n
+        `img = PIL_open("image.png")` \n
         `matrix = matrix_create(img)` \n
         `saturated_50 = Saturate(matrix, 0.5)` \n
         `desaturated_50 = Saturate(matrix, -0.5)` \n    
     """
     if type(input) == str:
-        matrix = matrix_create(open(input))
+        matrix = matrix_create(PIL_open(input))
     elif type(input) == Image.Image:
         matrix = matrix_create(input)
     elif type(input) == np.ndarray:
@@ -287,7 +288,7 @@ def Saturate(coef: float, input: str | np.ndarray | Image.Image) -> Image.Image:
     width = matrix.shape[1]
     height = matrix.shape[0]
     res = PIL.Image.new(mode = "RGB", size = (width, height), color = (255, 255, 255))
-    res_pixels = load(res.convert("RGB"))
+    res_pixels = PIL_load(res.convert("RGB"))
     for x in range(width):
         for y in range(height):
             res_pixels[y, x] = Saturate_color(coef, matrix[y, x])
@@ -297,7 +298,7 @@ def BnW(input: str | np.ndarray | Image.Image) -> Image.Image:
     """ ### Converts the image to black and white using the [Saturate](https://www.github.com/EgeEken/Saturate) function
     
     Usage: \n
-        `img = open("image.png")` \n
+        `img = PIL_open("image.png")` \n
         `matrix = matrix_create(img)` \n
         `black_and_white1 = BnW("image.png")` \n
         `black_and_white2 = BnW(matrix)` \n
@@ -310,7 +311,7 @@ def Normalize(input: str | np.ndarray | Image.Image) -> np.ndarray:
     Primary intended use case is for neural networks
     
     Usage: \n
-        `img = open("image.png")` \n
+        `img = PIL_open("image.png")` \n
         `normalized = Normalize(img)` \n
         `print(normalized[0, 0]) #for the value of the top left pixel between 0 and 1` \n
     """
@@ -325,13 +326,13 @@ def colorset_create(input: np.ndarray | Image.Image | str) -> set:
     """ ### Creates a set of all the different colors in an image matrix
     
     Usage: \n
-        `img = open("image.png")` \n
+        `img = PIL_open("image.png")` \n
         `matrix = matrix_create(img)` \n
         `colorset = colorset_create(matrix)` \n
         `print(len(colorset)) #for the number of colors` \n
     """
     if type(input) == str:
-        matrix = matrix_create(open(input))
+        matrix = matrix_create(PIL_open(input))
     elif type(input) == Image.Image:
         matrix = matrix_create(input)
     elif type(input) == np.ndarray:
@@ -356,7 +357,7 @@ def simpler_Normalize(input: str | Image.Image | np.ndarray, colorcount: int) ->
     Primary intended use case is for neural networks
     
     Usage: \n
-        `img = open("image.png")` \n
+        `img = PIL_open("image.png")` \n
         `normalized = simpler_Normalize(img, 4)` \n
         `print(normalized[0, 0]) #for the value of the top left pixel, will be either 0.0, 0.25, 0.5, 0.75 or 1.0` \n
     """
@@ -369,10 +370,10 @@ def simpler_Normalize(input: str | Image.Image | np.ndarray, colorcount: int) ->
     return res
     
 def array2line(input: np.ndarray | Image.Image | str) -> str:
-    """ ### Returns a line of text representing the given image
+    """ ### Returns a line of text representing the normalized version of the given image
     Primary intended use case is for neural networks"""
     if type(input) == str:
-        matrix = matrix_create(open(input))
+        matrix = matrix_create(PIL_open(input))
     elif type(input) == Image.Image:
         matrix = matrix_create(input)
     elif type(input) == np.ndarray:
@@ -410,16 +411,16 @@ def SimplifyColorV4(colorcount: int, input: str | np.ndarray | Image.Image) -> I
     This program recreates the input image using the given number of colors.
     
     Usage: \n
-        `img = open("image.png")` \n
+        `img = PIL_open("image.png")` \n
         `matrix = matrix_create(img)` \n
         `simplified_100 = SimplifyColorV4(100, "image.png")` \n
         `simplified_50 = SimplifyColorV4(50, img)` \n
         `simplified_10 = SimplifyColorV4(10, matrix)` \n
         `simplified_5 = SimplifyColorV4(5, simplified_10)` \n
-        `save(simplified_5, "simplified_5")` \n
+        `PIL_save(simplified_5, "simplified_5")` \n
     """
     if type(input) == str:
-        matrix = matrix_create(open(input))
+        matrix = matrix_create(PIL_open(input))
     elif type(input) == Image.Image:
         matrix = matrix_create(input)
     elif type(input) == np.ndarray:
@@ -431,7 +432,7 @@ def SimplifyColorV4(colorcount: int, input: str | np.ndarray | Image.Image) -> I
     width = matrix.shape[1]
     height = matrix.shape[0]
     res = PIL.Image.new(mode = "RGB", size = (width, height), color = (255, 255, 255))
-    res_pixels = load(res.convert("RGB"))
+    res_pixels = PIL_load(res.convert("RGB"))
     for x in range(width):
         for y in range(height):
             res_pixels[y, x] = closest_color(matrix[y, x], colorset)
@@ -465,13 +466,13 @@ def Quantize(colorcount: int, input: str | np.ndarray | Image.Image) -> Image.Im
     This program recreates the input image using the given number of colors, colors are sampled randomly from the image.
     
     Usage: \n
-        `img = open("image.png")` \n
+        `img = PIL_open("image.png")` \n
         `matrix = matrix_create(img)` \n
         `simplified_100 = SimplifyColorV4(100, "image.png")` \n
         `simplified_50 = SimplifyColorV4(50, img)` \n
         `simplified_10 = SimplifyColorV4(10, matrix)` \n
         `simplified_5 = SimplifyColorV4(5, simplified_10)` \n
-        `save(simplified_5, "simplified_5")` \n
+        `PIL_save(simplified_5, "simplified_5")` \n
     """
     return SimplifyColorV4(colorcount, input)
 
@@ -481,16 +482,16 @@ def SimplifyColorV5(input: str | np.ndarray | Image.Image) -> Image.Image:
     The complex algorithm causes the program to be more accurate, but also significantly slower.
     
     Usage: \n
-        `img = open("image.png")` \n
+        `img = PIL_open("image.png")` \n
         `matrix = matrix_create(img)` \n
         `simplified_100 = SimplifyColorV5(100, "image.png")` \n
         `simplified_50 = SimplifyColorV5(50, img)` \n
         `simplified_10 = SimplifyColorV5(10, matrix)` \n
         `simplified_5 = SimplifyColorV5(5, simplified_10)` \n
-        `save(simplified_5, "simplified_5")` \n
+        `PIL_save(simplified_5, "simplified_5")` \n
     """
     if type(input) == str:
-        matrix = matrix_create(open(input))
+        matrix = matrix_create(PIL_open(input))
     elif type(input) == Image.Image:
         matrix = matrix_create(input)
     elif type(input) == np.ndarray:
@@ -499,7 +500,7 @@ def SimplifyColorV5(input: str | np.ndarray | Image.Image) -> Image.Image:
     width = matrix.shape[1]
     height = matrix.shape[0]
     res = PIL.Image.new(mode = "RGB", size = (width, height), color = (255, 255, 255))
-    res_pixels = load(res.convert("RGB"))
+    res_pixels = PIL_load(res.convert("RGB"))
     for x in range(width):
         for y in range(height):
             res_pixels[y, x] = closest_color(matrix[y, x], colorset)
@@ -558,3 +559,63 @@ def matrix_to_cv2_video(matrix_video: np.ndarray) -> list:
     for i in range(matrix_video.shape[0]):
         res.append(matrix_to_cv2(matrix_video[i]))
     return res
+
+def simpler_Normalize_Video(input: str | list | np.ndarray) -> np.ndarray:
+    """ ### Normalizes a video by converting it to a matrix and then normalizing it
+    Usage: \n
+        `simpler_Normalize_Video("video.mp4")` \n
+        `simpler_Normalize_Video(ReadVideo("video.mp4"))` \n
+        `simpler_Normalize_Video(cv2_video_to_matrix(ReadVideo("video.mp4")))` \n
+    """
+    if type(input) == str:
+        matrix = cv2_video_to_matrix(ReadVideo(input))
+    elif type(input) == list:
+        matrix = cv2_video_to_matrix(input)
+    elif type(input) == np.ndarray:
+        matrix = input
+    res = np.zeros(matrix.shape, dtype = float)
+    for i in range(matrix.shape[0]):
+        res[i] = simpler_Normalize(matrix[i])
+    return res
+
+def video_to_txt(input: str | list | np.ndarray, filename: str):
+    """ ### Takes a normalized video and converts it into a text file to be later read and used as training data for a neural network
+    Saves the resulting text file into the current directory as filename .txt
+    
+    Usage: \n
+        `video_to_txt("video.mp4", "video.txt")` \n
+        `video_to_txt(ReadVideo("video.mp4"), "video.txt")` \n
+        `video_to_txt(cv2_video_to_matrix(ReadVideo("video.mp4")), "video.txt")` \n
+    """
+    if type(input) == str:
+        matrix = cv2_video_to_matrix(ReadVideo(input))
+    elif type(input) == list:
+        matrix = cv2_video_to_matrix(input)
+    elif type(input) == np.ndarray:
+        matrix = input
+    with open(filename + ".txt", "w") as f:
+        for frame in matrix:
+            f.write(array2line(frame))
+            f.write(os.linesep)
+    f.close()
+    
+def video_to_training(input: str | list | np.ndarray, filename: str):
+    """ ### Takes a video, normalizes it, and converts it into a text file to be later read and used as training data for a neural network
+    Saves the resulting text file into the current directory as filename .txt
+    
+    Usage: \n
+        `video_to_training("video.mp4", "video.txt")` \n
+        `video_to_training(ReadVideo("video.mp4"), "video.txt")` \n
+        `video_to_training(cv2_video_to_matrix(ReadVideo("video.mp4")), "video.txt")` \n
+    """
+    if type(input) == str:
+        matrix = cv2_video_to_matrix(ReadVideo(input))
+    elif type(input) == list:
+        matrix = cv2_video_to_matrix(input)
+    elif type(input) == np.ndarray:
+        matrix = input
+    with open(filename + ".txt", "w") as f:
+        for frame in matrix:
+            f.write(array2line(simpler_Normalize(frame)))
+            f.write(os.linesep)
+    f.close()
