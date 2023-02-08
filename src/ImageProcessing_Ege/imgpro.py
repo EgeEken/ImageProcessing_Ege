@@ -2,8 +2,6 @@ import PIL
 from PIL import Image
 import time
 import numpy as np
-import imageio.v3 as iio3
-import imageio.v2 as iio2
 import math
 import random
 import cv2
@@ -166,10 +164,11 @@ def Simplify(threshold: float, input: str | np.ndarray | Image.Image) -> Image.I
     width = contrastmatrix.shape[1]
     height = contrastmatrix.shape[0]
     res = PIL.Image.new(mode = "RGB", size = (width, height), color = (255, 255, 255))
+    res_pixels = load(res.convert("RGB"))
     for x in range(width):
         for y in range(height):
             if contrastmatrix[y, x] > threshold:
-                res[y, x] = (0, 0, 0)
+                res_pixels[y, x] = (0, 0, 0)
     return res
 
 def Brighten_color(coef: float, c: tuple) -> tuple:
@@ -215,9 +214,10 @@ def Brighten(coef: float, input: str | np.ndarray | Image.Image) -> Image.Image:
     width = matrix.shape[1]
     height = matrix.shape[0]
     res = PIL.Image.new(mode = "RGB", size = (width, height), color = (255, 255, 255))
+    res_pixels = load(res.convert("RGB"))
     for x in range(width):
         for y in range(height):
-            res[y, x] = Brighten_color(coef, matrix[y, x])
+            res_pixels[y, x] = Brighten_color(coef, matrix[y, x])
     return res
 
 def Saturate_color(c: tuple, coef: float) -> tuple:
@@ -287,9 +287,10 @@ def Saturate(coef: float, input: str | np.ndarray | Image.Image) -> Image.Image:
     width = matrix.shape[1]
     height = matrix.shape[0]
     res = PIL.Image.new(mode = "RGB", size = (width, height), color = (255, 255, 255))
+    res_pixels = load(res.convert("RGB"))
     for x in range(width):
         for y in range(height):
-            res[y, x] = Saturate_color(coef, matrix[y, x])
+            res_pixels[y, x] = Saturate_color(coef, matrix[y, x])
     return res
 
 def BnW(input: str | np.ndarray | Image.Image) -> Image.Image:
@@ -430,9 +431,10 @@ def SimplifyColorV4(colorcount: int, input: str | np.ndarray | Image.Image) -> I
     width = matrix.shape[1]
     height = matrix.shape[0]
     res = PIL.Image.new(mode = "RGB", size = (width, height), color = (255, 255, 255))
+    res_pixels = load(res.convert("RGB"))
     for x in range(width):
         for y in range(height):
-            res[y, x] = closest_color(matrix[y, x], colorset)
+            res_pixels[y, x] = closest_color(matrix[y, x], colorset)
     return res
 
 def chain_center(chain: list):
@@ -497,9 +499,10 @@ def SimplifyColorV5(input: str | np.ndarray | Image.Image) -> Image.Image:
     width = matrix.shape[1]
     height = matrix.shape[0]
     res = PIL.Image.new(mode = "RGB", size = (width, height), color = (255, 255, 255))
+    res_pixels = load(res.convert("RGB"))
     for x in range(width):
         for y in range(height):
-            res[y, x] = closest_color(matrix[y, x], colorset)
+            res_pixels[y, x] = closest_color(matrix[y, x], colorset)
     return res
 
 def ReadVideo(filename: str) -> list:
@@ -555,4 +558,3 @@ def matrix_to_cv2_video(matrix_video: np.ndarray) -> list:
     for i in range(matrix_video.shape[0]):
         res.append(matrix_to_cv2(matrix_video[i]))
     return res
-
