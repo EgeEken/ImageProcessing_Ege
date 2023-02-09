@@ -91,7 +91,7 @@ def matrix_create(img: Image.Image) -> np.ndarray:
     res = np.zeros((height,width), dtype=tuple)
     for x in range(width):
         for y in range(height):
-            res[y, x] = loaded[x,y]
+            res[y, x] = loaded[x, y]
     return res
 
 def around(matrix: np.ndarray, x: int, y: int) -> list:
@@ -122,7 +122,7 @@ def check_contrast(matrix: np.ndarray, x: int, y: int) -> float:
     if type(matrix[0, 0]) == float:
         return matrix
     neighbors = around(matrix, x, y)
-    res = 0
+    res = 0.0
     for i in neighbors:
         res += distance(matrix[y, x], i)
     return res
@@ -135,12 +135,12 @@ def create_contrast_matrix(matrix: np.ndarray) -> np.ndarray:
         `matrix = matrix_create(img)` \n
         `contrast_matrix = create_contrast_matrix(matrix)` \n
     """
-    width = matrix.shape[1]
-    height = matrix.shape[0]
+    width = matrix.shape[0]
+    height = matrix.shape[1]
     res = np.zeros((height,width))
     for x in range(width):
         for y in range(height):
-            res[y, x] = check_contrast(matrix, x, y)
+            res[y, x] = check_contrast(matrix, y, x)
     return res
 
 def Simplify(threshold: float, input: str | np.ndarray | Image.Image) -> Image.Image:
@@ -162,14 +162,14 @@ def Simplify(threshold: float, input: str | np.ndarray | Image.Image) -> Image.I
         contrastmatrix = create_contrast_matrix(matrix_create(input))
     elif type(input) == np.ndarray:
         contrastmatrix = create_contrast_matrix(input)
-    width = contrastmatrix.shape[1]
-    height = contrastmatrix.shape[0]
+    width = contrastmatrix.shape[0]
+    height = contrastmatrix.shape[1]
     res = PIL.Image.new(mode = "RGB", size = (width, height), color = (255, 255, 255))
-    res_pixels = PIL_load(res.convert("RGB"))
+    res_pixels = PIL_load(res)
     for x in range(width):
         for y in range(height):
-            if contrastmatrix[y, x] > threshold:
-                res_pixels[y, x] = (0, 0, 0)
+            if contrastmatrix[x, y] >= threshold:
+                res_pixels[x, y] = (0, 0, 0)
     return res
 
 def Brighten_color(coef: float, c: tuple) -> tuple:
@@ -215,13 +215,13 @@ def Brighten(coef: float, input: str | np.ndarray | Image.Image) -> Image.Image:
     width = matrix.shape[1]
     height = matrix.shape[0]
     res = PIL.Image.new(mode = "RGB", size = (width, height), color = (255, 255, 255))
-    res_pixels = PIL_load(res.convert("RGB"))
+    res_pixels = PIL_load(res)
     for x in range(width):
         for y in range(height):
-            res_pixels[y, x] = Brighten_color(coef, matrix[y, x])
+            res_pixels[x, y] = Brighten_color(coef, matrix[y, x])
     return res
 
-def Saturate_color(c: tuple, coef: float) -> tuple:
+def Saturate_color(coef: float, c: tuple) -> tuple:
     if coef == 0:
         return c
     if coef > 1:
@@ -288,23 +288,38 @@ def Saturate(coef: float, input: str | np.ndarray | Image.Image) -> Image.Image:
     width = matrix.shape[1]
     height = matrix.shape[0]
     res = PIL.Image.new(mode = "RGB", size = (width, height), color = (255, 255, 255))
-    res_pixels = PIL_load(res.convert("RGB"))
+    res_pixels = PIL_load(res)
     for x in range(width):
         for y in range(height):
-            res_pixels[y, x] = Saturate_color(coef, matrix[y, x])
+            res_pixels[x, y] = Saturate_color(coef, matrix[y, x])
     return res
 
 def BnW(input: str | np.ndarray | Image.Image) -> Image.Image:
-    """ ### Converts the image to black and white using the [Saturate](https://www.github.com/EgeEken/Saturate) function
+    """ ### Converts the image to black and white
     
     Usage: \n
         `img = PIL_open("image.png")` \n
         `matrix = matrix_create(img)` \n
-        `black_and_white1 = BnW("image.png")` \n
-        `black_and_white2 = BnW(matrix)` \n
-        `black_and_white3 = BnW(img)` \n
+        `black_and_white1 = BnW_mean("image.png")` \n
+        `black_and_white2 = BnW_mean(matrix)` \n
+        `black_and_white3 = BnW_mean(img)` \n
     """
-    return Saturate(-1, input)
+    if type(input) == str:
+        matrix = matrix_create(PIL_open(input))
+    elif type(input) == Image.Image:
+        matrix = matrix_create(input)
+    elif type(input) == np.ndarray:
+        matrix = input
+    width = matrix.shape[1]
+    height = matrix.shape[0]
+    res = PIL.Image.new(mode = "RGB", size = (width, height), color = (255, 255, 255))
+    res_pixels = PIL_load(res)
+    for x in range(width):
+        for y in range(height):
+            r, g, b = matrix[y, x]
+            mean = (r + g + b) // 3
+            res_pixels[x, y] = (mean, mean, mean)
+    return res
 
 def Normalize(input: str | np.ndarray | Image.Image) -> np.ndarray:
     """ ### Converts the image to black and white, returns a matrix of floats between 0 and 1, where 0 is black and 1 is white
@@ -315,11 +330,39 @@ def Normalize(input: str | np.ndarray | Image.Image) -> np.ndarray:
         `normalized = Normalize(img)` \n
         `print(normalized[0, 0]) #for the value of the top left pixel between 0 and 1` \n
     """
-    bnw = BnW(input)
-    res = np.zeros(bnw.shape, dtype=float)
-    for x in range(bnw.shape[1]):
-        for y in range(bnw.shape[0]):
-            res[y, x] = bnw[y, x][0] / 255
+    if type(input) == str:
+        matrix = matrix_create(PIL_open(input))
+    elif type(input) == Image.Image:
+        matrix = matrix_create(input)
+    elif type(input) == np.ndarray:
+        matrix = input
+    bnw = BnW(matrix)
+    loaded = PIL_load(bnw)
+    width = matrix.shape[0]
+    height = matrix.shape[1]
+    res = np.zeros((width, height), dtype=float)
+    for x in range(width):
+        for y in range(height):
+            res[x, y] = loaded[y, x][0] / 255
+    return res
+
+def deNormalize(matrix: np.ndarray) -> Image.Image:
+    """ ### Converts a normalized matrix back to an image
+    
+    Usage: \n
+        `img = PIL_open("image.png")` \n
+        `normalized = Normalize(img)` \n
+        `denormalized = deNormalize(normalized)` \n
+        `PIL_save(denormalized, "image_bnw.png")` \n
+    """
+    width = matrix.shape[1]
+    height = matrix.shape[0]
+    res = PIL.Image.new(mode = "RGB", size = (width, height), color = (255, 255, 255))
+    res_pixels = PIL_load(res)
+    for x in range(width):
+        for y in range(height):
+            rgb = int(float(matrix[y, x]) * 255)
+            res_pixels[x, y] = (rgb, rgb, rgb)
     return res
 
 def colorset_create(input: np.ndarray | Image.Image | str) -> set:
@@ -368,7 +411,7 @@ def simpler_Normalize(input: str | Image.Image | np.ndarray, colorcount: int) ->
         for y in range(matrix.shape[0]):
             res[y, x] = closest_normal(matrix[y, x], colorset)
     return res
-    
+
 def array2line(input: np.ndarray | Image.Image | str) -> str:
     """ ### Returns a line of text representing the normalized version of the given image
     Primary intended use case is for neural networks"""
@@ -428,21 +471,21 @@ def SimplifyColorV4(colorcount: int, input: str | np.ndarray | Image.Image) -> I
     if colorcount < 1:
         print("Warning: Color count is smaller than 1, setting it to 1")
         colorcount = 1
-    colorset = np.random.choice(colorset_create(matrix), colorcount)
+    colorset = set(random.sample(list(colorset_create(matrix)), colorcount))
     width = matrix.shape[1]
     height = matrix.shape[0]
     res = PIL.Image.new(mode = "RGB", size = (width, height), color = (255, 255, 255))
-    res_pixels = PIL_load(res.convert("RGB"))
+    res_pixels = PIL_load(res)
     for x in range(width):
         for y in range(height):
-            res_pixels[y, x] = closest_color(matrix[y, x], colorset)
+            res_pixels[x, y] = closest_color(matrix[y, x], colorset)
     return res
 
 def chain_center(chain: list):
     """ ### Returns the center of a chain of colors"""
-    return (int(np.mean([chain[i][0] for i in range(len(chain))])),
-            int(np.mean([chain[i][1] for i in range(len(chain))])),
-            int(np.mean([chain[i][2] for i in range(len(chain))])))
+    return (int(np.mean([rgb[0] for rgb in chain])),
+            int(np.mean([rgb[1] for rgb in chain])),
+            int(np.mean([rgb[2] for rgb in chain])))
 
 def cluster_centers(colorset: set):
     """ ### Returns the centers of the clusters of colors"""
@@ -451,8 +494,8 @@ def cluster_centers(colorset: set):
     for i in colorset:
         if not any(i in sublist for sublist in chains):
             chaincheck = i
-            while closest_color_strict(colorset, chaincheck) not in subchain and not any(closest_color_strict(colorset, chaincheck) in sublist2 for sublist2 in chains):
-                chaincheck = closest_color_strict(colorset, chaincheck)
+            while closest_color_strict(chaincheck, colorset) not in subchain and not any(closest_color_strict(chaincheck, colorset) in sublist2 for sublist2 in chains):
+                chaincheck = closest_color_strict(chaincheck, colorset)
                 subchain.add(chaincheck)
             subchain.add(i)
             chains.append(subchain)
@@ -500,15 +543,18 @@ def SimplifyColorV5(input: str | np.ndarray | Image.Image) -> Image.Image:
     width = matrix.shape[1]
     height = matrix.shape[0]
     res = PIL.Image.new(mode = "RGB", size = (width, height), color = (255, 255, 255))
-    res_pixels = PIL_load(res.convert("RGB"))
+    res_pixels = PIL_load(res)
     for x in range(width):
         for y in range(height):
-            res_pixels[y, x] = closest_color(matrix[y, x], colorset)
+            res_pixels[x, y] = closest_color(matrix[y, x], colorset)
     return res
 
-def ReadVideo(filename: str) -> list:
+def ReadVideo(filename: str, extension: str = "mp4") -> list:
     """ ### Reads a video file and returns a list of frames"""
-    cap = cv2.VideoCapture(filename)
+    if filename[-3:] == extension:
+        cap = cv2.VideoCapture(filename)
+    else:
+        cap = cv2.VideoCapture(filename + "." + extension)
     res = []
     while True:
         ret, frame = cap.read()
@@ -520,7 +566,7 @@ def ReadVideo(filename: str) -> list:
 
 def WriteVideo(filename: str, frames: list, fps: int, extension: str = 'mp4', format: str = "mp4v"):
     """ ### Writes a list of frames to a video file"""
-    size = frames[0].shape[:2]
+    size = frames[0].shape[:2][::-1]
     if filename[-3:] == extension:
         out = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*format), fps, size)
     else:
@@ -528,7 +574,7 @@ def WriteVideo(filename: str, frames: list, fps: int, extension: str = 'mp4', fo
     for i in range(len(frames)):
         out.write(frames[i])
     out.release()
-
+    
 def cv2_to_matrix(cv2_img: np.ndarray) -> np.ndarray:
     """ ### Converts a cv2 image to a matrix with tuples as elements instead of uint8 arrays"""
     res = np.zeros((cv2_img.shape[0], cv2_img.shape[1]), dtype = tuple)
@@ -559,6 +605,12 @@ def matrix_to_cv2_video(matrix_video: np.ndarray) -> list:
     for i in range(matrix_video.shape[0]):
         res.append(matrix_to_cv2(matrix_video[i]))
     return res
+
+#videomatrix = cv2_video_to_matrix(ReadVideo("blocked"))
+#print("Video matrix shape:", videomatrix.shape)
+#backtocv2 = matrix_to_cv2_video(videomatrix)
+#print("Back to cv2 shape:", len(backtocv2))
+#WriteVideo("test", backtocv2, 30)
 
 def simpler_Normalize_Video(input: str | list | np.ndarray) -> np.ndarray:
     """ ### Normalizes a video by converting it to a matrix and then normalizing it
