@@ -14,6 +14,7 @@ Install steps:
 Current features:
 
 - Open, load and save functionality to edit and create images using the PIL library
+- Open load and save functionality to edit and create videos using the OpenCV library (cv2)
 - Functions to turn PIL image objects into numpy matrices for faster processing
 - Function to turn images into 1d arrays of normalized black and white versions of them with pixel values between 0 and 1 for neural network training 
 - Functions to read and write videos using the opencv library (cv2) and also to create them using tuple RGB matrixes used in and created by the other functions, and vice versa allowing for frames from the videos read by opencv to be treated and processed by PIL and numpy
@@ -22,10 +23,9 @@ Optimized and improved versions of my image processing programs included:
 - [Simplify](https://github.com/EgeEken/Simplify)
 - [Simplify Color V4 and V5](https://github.com/EgeEken/Simplify-Color)
 - [Brighten](https://github.com/EgeEken/Brighten), [Saturate](https://github.com/EgeEken/Saturate)
+- [Simplify Video](https://github.com/EgeEken/Simplify-Video)
 
 To be added:
 
 - [Fill Object](https://github.com/EgeEken/Fill-Object)
 - [Detect Object](https://github.com/EgeEken/Detect-Object)
-- Functions to turn images into mp4 and gif format videos
-- [Simplify Video](https://github.com/EgeEken/Simplify-Video)

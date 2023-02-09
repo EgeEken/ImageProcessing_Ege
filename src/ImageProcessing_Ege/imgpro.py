@@ -1,7 +1,7 @@
 import PIL
 from PIL import Image
-import time
 import numpy as np
+import time
 import math
 import random
 import cv2
@@ -65,6 +65,8 @@ def PIL_load(image: Image.Image) -> Image.Image.load:
     """
     return image.load()
 
+
+
 def distance(c1: tuple, c2: tuple) -> float:
     """ ### Returns the distance between two colors in RGB space
     Returns a float
@@ -93,6 +95,8 @@ def matrix_create(img: Image.Image) -> np.ndarray:
         for y in range(height):
             res[y, x] = loaded[x, y]
     return res
+
+
 
 def around(matrix: np.ndarray, x: int, y: int) -> list:
     """ ### Checks around matrix[y, x] and returns a list of the color values of the pixels around it
@@ -171,6 +175,8 @@ def Simplify(threshold: float, input: str | np.ndarray | Image.Image) -> Image.I
             if contrastmatrix[x, y] >= threshold:
                 res_pixels[x, y] = (0, 0, 0)
     return res
+
+
 
 def Brighten_color(coef: float, c: tuple) -> tuple:
     if coef == 0:
@@ -294,6 +300,8 @@ def Saturate(coef: float, input: str | np.ndarray | Image.Image) -> Image.Image:
             res_pixels[x, y] = Saturate_color(coef, matrix[y, x])
     return res
 
+
+
 def BnW(input: str | np.ndarray | Image.Image) -> Image.Image:
     """ ### Converts the image to black and white
     
@@ -365,26 +373,6 @@ def deNormalize(matrix: np.ndarray) -> Image.Image:
             res_pixels[x, y] = (rgb, rgb, rgb)
     return res
 
-def colorset_create(input: np.ndarray | Image.Image | str) -> set:
-    """ ### Creates a set of all the different colors in an image matrix
-    
-    Usage: \n
-        `img = PIL_open("image.png")` \n
-        `matrix = matrix_create(img)` \n
-        `colorset = colorset_create(matrix)` \n
-        `print(len(colorset)) #for the number of colors` \n
-    """
-    if type(input) == str:
-        matrix = matrix_create(PIL_open(input))
-    elif type(input) == Image.Image:
-        matrix = matrix_create(input)
-    elif type(input) == np.ndarray:
-        matrix = input
-    res = set()
-    for i in matrix:
-        res |= set(i)
-    return res
-
 def closest_normal(c: float, normalset: set | np.ndarray) -> float:
     """ ### Finds the closest color to the given color in the given color set, both using normalized values between 1 and 0"""
     if c in normalset:
@@ -427,6 +415,28 @@ def array2line(input: np.ndarray | Image.Image | str) -> str:
             res += str(j)
     return res
     
+    
+    
+def colorset_create(input: np.ndarray | Image.Image | str) -> set:
+    """ ### Creates a set of all the different colors in an image matrix
+    
+    Usage: \n
+        `img = PIL_open("image.png")` \n
+        `matrix = matrix_create(img)` \n
+        `colorset = colorset_create(matrix)` \n
+        `print(len(colorset)) #for the number of colors` \n
+    """
+    if type(input) == str:
+        matrix = matrix_create(PIL_open(input))
+    elif type(input) == Image.Image:
+        matrix = matrix_create(input)
+    elif type(input) == np.ndarray:
+        matrix = input
+    res = set()
+    for i in matrix:
+        res |= set(i)
+    return res
+
 def closest_color(c: tuple, colorset: set | list | np.ndarray) -> tuple:
     """ ### Finds the closest color to the given color in the given color set"""
     if c in colorset:
@@ -481,6 +491,23 @@ def SimplifyColorV4(colorcount: int, input: str | np.ndarray | Image.Image) -> I
             res_pixels[x, y] = closest_color(matrix[y, x], colorset)
     return res
 
+def Quantize(colorcount: int, input: str | np.ndarray | Image.Image) -> Image.Image:
+    """ ### Applies the [SimplifyColor V4](https://www.github.com/EgeEken/Simplify-Color) algorithm to the given image
+    This program recreates the input image using the given number of colors, colors are sampled randomly from the image.
+    
+    Usage: \n
+        `img = PIL_open("image.png")` \n
+        `matrix = matrix_create(img)` \n
+        `simplified_100 = SimplifyColorV4(100, "image.png")` \n
+        `simplified_50 = SimplifyColorV4(50, img)` \n
+        `simplified_10 = SimplifyColorV4(10, matrix)` \n
+        `simplified_5 = SimplifyColorV4(5, simplified_10)` \n
+        `PIL_save(simplified_5, "simplified_5")` \n
+    """
+    return SimplifyColorV4(colorcount, input)
+
+
+
 def chain_center(chain: list):
     """ ### Returns the center of a chain of colors"""
     return (int(np.mean([rgb[0] for rgb in chain])),
@@ -503,21 +530,6 @@ def cluster_centers(colorset: set):
     print('Simplified down to', len(chains), 'colors.')
     chain_centers = [chain_center(chain) for chain in chains]
     return chain_centers
-
-def Quantize(colorcount: int, input: str | np.ndarray | Image.Image) -> Image.Image:
-    """ ### Applies the [SimplifyColor V4](https://www.github.com/EgeEken/Simplify-Color) algorithm to the given image
-    This program recreates the input image using the given number of colors, colors are sampled randomly from the image.
-    
-    Usage: \n
-        `img = PIL_open("image.png")` \n
-        `matrix = matrix_create(img)` \n
-        `simplified_100 = SimplifyColorV4(100, "image.png")` \n
-        `simplified_50 = SimplifyColorV4(50, img)` \n
-        `simplified_10 = SimplifyColorV4(10, matrix)` \n
-        `simplified_5 = SimplifyColorV4(5, simplified_10)` \n
-        `PIL_save(simplified_5, "simplified_5")` \n
-    """
-    return SimplifyColorV4(colorcount, input)
 
 def SimplifyColorV5(input: str | np.ndarray | Image.Image) -> Image.Image:
     """ ### Applies the [SimplifyColor V5](https://www.github.com/EgeEken/Simplify-Color) algorithm to the given image
@@ -549,6 +561,10 @@ def SimplifyColorV5(input: str | np.ndarray | Image.Image) -> Image.Image:
             res_pixels[x, y] = closest_color(matrix[y, x], colorset)
     return res
 
+
+
+
+
 def ReadVideo(filename: str, extension: str = "mp4") -> list:
     """ ### Reads a video file and returns a list of frames"""
     if filename[-3:] == extension:
@@ -574,100 +590,124 @@ def WriteVideo(filename: str, frames: list, fps: int, extension: str = 'mp4', fo
     for i in range(len(frames)):
         out.write(frames[i])
     out.release()
-    
-def cv2_to_matrix(cv2_img: np.ndarray) -> np.ndarray:
-    """ ### Converts a cv2 image to a matrix with tuples as elements instead of uint8 arrays"""
-    res = np.zeros((cv2_img.shape[0], cv2_img.shape[1]), dtype = tuple)
-    for i in range(cv2_img.shape[0]):
-        for j in range(cv2_img.shape[1]):
-            res[i, j] = tuple(cv2_img[i, j])
-    return res
 
-def cv2_video_to_matrix(cv2_video: list) -> np.ndarray:
-    """ ### Converts a cv2 video to a matrix with tuples as elements instead of uint8 arrays"""
-    res = np.zeros((len(cv2_video), cv2_video[0].shape[0], cv2_video[0].shape[1]), dtype = tuple)
-    for i in range(len(cv2_video)):
-        res[i] = cv2_to_matrix(cv2_video[i])
-    return res
-
-def matrix_to_cv2(matrix: np.ndarray) -> np.ndarray:
-    """ ### Converts a matrix with tuples as elements to a cv2 image"""
-    res = np.zeros((matrix.shape[0], matrix.shape[1], 3), dtype = np.uint8)
-    for i in range(matrix.shape[0]):
-        for j in range(matrix.shape[1]):
-            for k in range(3):
-                res[i, j, k] = matrix[i, j][k].astype(np.uint8)
-    return res
-
-def matrix_to_cv2_video(matrix_video: np.ndarray) -> list:
-    """ ### Converts a matrix with tuples as elements to a cv2 video"""
+def video_to_txt(frames: list, filename: str) -> np.ndarray:
+    """ ### Turns the given frame into a black and white version, and saves the colors in a textfile where the resulting black and white pixels are written in one line"""
+    if filename[-4:] != ".txt":
+        filename += ".txt"
+    width = frames[0].shape[1]
+    height = frames[0].shape[0]
+    for i in range(len(frames)):
+        with open(filename, "w") as f:
+            for y in range(height):
+                for x in range(width):
+                    f.write(str(frames[i][y, x]) + ",")
+            f.write(os.linesep)
+                   
+def BnW_Video(filename: str, extension: str = "mp4") -> list:
+    """ ### Normalizes the colors of a video while reading it into the given number of black to white colors and returns a cv2 video list"""
+    if filename[-3:] == extension:
+        cap = cv2.VideoCapture(filename)
+    else:
+        cap = cv2.VideoCapture(filename + "." + extension)
     res = []
-    for i in range(matrix_video.shape[0]):
-        res.append(matrix_to_cv2(matrix_video[i]))
+    while True:
+        ret, frame = cap.read()
+        if ret:
+            res.append(cv2.cvtColor(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), cv2.COLOR_GRAY2BGR))
+        else:
+            break
     return res
 
-#videomatrix = cv2_video_to_matrix(ReadVideo("blocked"))
-#print("Video matrix shape:", videomatrix.shape)
-#backtocv2 = matrix_to_cv2_video(videomatrix)
-#print("Back to cv2 shape:", len(backtocv2))
-#WriteVideo("test", backtocv2, 30)
-
-def simpler_Normalize_Video(input: str | list | np.ndarray) -> np.ndarray:
-    """ ### Normalizes a video by converting it to a matrix and then normalizing it
-    Usage: \n
-        `simpler_Normalize_Video("video.mp4")` \n
-        `simpler_Normalize_Video(ReadVideo("video.mp4"))` \n
-        `simpler_Normalize_Video(cv2_video_to_matrix(ReadVideo("video.mp4")))` \n
-    """
-    if type(input) == str:
-        matrix = cv2_video_to_matrix(ReadVideo(input))
-    elif type(input) == list:
-        matrix = cv2_video_to_matrix(input)
-    elif type(input) == np.ndarray:
-        matrix = input
-    res = np.zeros(matrix.shape, dtype = float)
-    for i in range(matrix.shape[0]):
-        res[i] = simpler_Normalize(matrix[i])
+def Create_Training_Matrix(filename: str, framecount: int, width: int, height: int, extension: str = "mp4") -> np.ndarray:
+    """ ### Creates a training data matrix of the given video file for a neural network"""
+    if filename[-3:] == extension:
+        cap = cv2.VideoCapture(filename)
+    else:
+        cap = cv2.VideoCapture(filename + "." + extension)
+    res = np.zeros((framecount, width * height), dtype = np.uint8)
+    i = 0
+    while True:
+        ret, frame = cap.read()
+        if ret:
+            res[i] = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY).reshape(width * height)
+            i += 1
+        else:
+            break
     return res
 
-def video_to_txt(input: str | list | np.ndarray, filename: str):
-    """ ### Takes a normalized video and converts it into a text file to be later read and used as training data for a neural network
-    Saves the resulting text file into the current directory as filename .txt
+def distance_cv2(c1: np.ndarray, c2: np.ndarray) -> float:
+    """ ### Returns the distance between two colors in RGB space, takes 2 cv2 colors instead of two tuples. 
+    Returns a float
+    Usage: \n
+        `distance_cv2(np.array([0, 0, 0]), np.array([255, 255, 255]))` \n
+        `video = ReadVideo("video")` \n
+        `distance_cv2(video[0][0, 0], video[20][0, 0])` \n
+    """
+    if c1[0] == c2[0] and c1[1] == c2[1] and c1[2] == c2[2]:
+        return 0
+    return math.sqrt(((float(c2[0])-float(c1[0]))**2+(float(c2[1]) - float(c1[1]))**2+(float(c2[2]) - float(c1[2]))**2))
+
+def check_contrast_cv2(matrix: np.ndarray, x: int, y: int) -> float:
+    """ ### Returns the contrast value of the pixel at matrix[y, x]
+    Calculated as the sum of the distance between the pixel and its neighbors
+    """
+    if type(matrix[0, 0]) == float:
+        return matrix
+    neighbors = around(matrix, x, y)
+    res = 0.0
+    for i in neighbors:
+        res += distance_cv2(matrix[y, x], i)
+    return res
+
+def create_contrast_matrix_cv2(matrix: np.ndarray) -> np.ndarray:
+    """ ### Returns the contrast matrix of the given matrix
     
     Usage: \n
-        `video_to_txt("video.mp4", "video.txt")` \n
-        `video_to_txt(ReadVideo("video.mp4"), "video.txt")` \n
-        `video_to_txt(cv2_video_to_matrix(ReadVideo("video.mp4")), "video.txt")` \n
+        `img1 = cv2.imread("image.png")` \n	
+        `img2 = ReadVideo("video.mp4")[0]` \n
+        `contrast_matrix = create_contrast_matrix_cv2(img1)` \n   
+        `contrast_matrix = create_contrast_matrix_cv2(img2)` \n
     """
-    if type(input) == str:
-        matrix = cv2_video_to_matrix(ReadVideo(input))
-    elif type(input) == list:
-        matrix = cv2_video_to_matrix(input)
-    elif type(input) == np.ndarray:
-        matrix = input
-    with open(filename + ".txt", "w") as f:
-        for frame in matrix:
-            f.write(array2line(frame))
-            f.write(os.linesep)
-    f.close()
+    width = matrix.shape[0]
+    height = matrix.shape[1]
+    res = np.zeros((height,width), dtype = float)
+    for x in range(width):
+        for y in range(height):
+            res[y, x] = check_contrast_cv2(matrix, y, x)
+    return res
     
-def video_to_training(input: str | list | np.ndarray, filename: str):
-    """ ### Takes a video, normalizes it, and converts it into a text file to be later read and used as training data for a neural network
-    Saves the resulting text file into the current directory as filename .txt
-    
-    Usage: \n
-        `video_to_training("video.mp4", "video.txt")` \n
-        `video_to_training(ReadVideo("video.mp4"), "video.txt")` \n
-        `video_to_training(cv2_video_to_matrix(ReadVideo("video.mp4")), "video.txt")` \n
-    """
-    if type(input) == str:
-        matrix = cv2_video_to_matrix(ReadVideo(input))
-    elif type(input) == list:
-        matrix = cv2_video_to_matrix(input)
-    elif type(input) == np.ndarray:
-        matrix = input
-    with open(filename + ".txt", "w") as f:
-        for frame in matrix:
-            f.write(array2line(simpler_Normalize(frame)))
-            f.write(os.linesep)
-    f.close()
+def Simplify_cv2(img: np.ndarray, threshold: float) -> np.ndarray:
+    """ ### Simplifies the given cv2 image by the given threshold and returns a cv2 image"""
+    width = img.shape[1]
+    height = img.shape[0]
+    res = np.zeros((width, height, 3), dtype = np.uint8)
+    contrastmatrix = create_contrast_matrix_cv2(img)    
+    for x in range(width):
+        for y in range(height):
+            if contrastmatrix[x, y] >= threshold:
+                res[x, y] = np.array([0, 0, 0], dtype=np.uint8)
+            else:
+                res[x, y] = np.array([255, 255, 255], dtype=np.uint8)
+    return res
+
+def SimplifyVideo(filename: str | list, threshold: float, extension: str = "mp4") -> list:
+    """ ### Simplifies the given video file by the given threshold and returns a cv2 video list"""
+    if type(filename) == str:
+        if filename[-3:] == extension:
+            cap = cv2.VideoCapture(filename)
+        else:
+            cap = cv2.VideoCapture(filename + "." + extension)
+        res = []
+        while True:
+            ret, frame = cap.read()
+            if ret:
+                res.append(Simplify_cv2(frame, threshold))
+            else:
+                break
+        return res
+    elif type(filename) == list:
+        res = []
+        for i in range(len(filename)):
+            res.append(Simplify_cv2(filename[i], threshold))
+        return res
