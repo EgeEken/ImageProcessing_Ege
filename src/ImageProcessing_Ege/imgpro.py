@@ -1,5 +1,6 @@
 import PIL
 from PIL import Image
+from PIL import ImageGrab
 import numpy as np
 import time
 import math
@@ -139,15 +140,15 @@ def create_contrast_matrix(matrix: np.ndarray) -> np.ndarray:
         `matrix = matrix_create(img)` \n
         `contrast_matrix = create_contrast_matrix(matrix)` \n
     """
-    width = matrix.shape[0]
-    height = matrix.shape[1]
+    width = matrix.shape[1]
+    height = matrix.shape[0]
     res = np.zeros((height,width))
     for x in range(width):
         for y in range(height):
-            res[y, x] = check_contrast(matrix, y, x)
+            res[y, x] = check_contrast(matrix, x, y)
     return res
 
-def Simplify(threshold: float, input: str | np.ndarray | Image.Image) -> Image.Image:
+def Simplify(input: str | np.ndarray | Image.Image, threshold: int) -> Image.Image:
     """ ### Applies the [Simplify](https://www.github.com/EgeEken/Simplify) algorithm to the given image)
     This results in a image with only black and white pixels, black pixels being the ones in high contrast points
     
@@ -166,13 +167,13 @@ def Simplify(threshold: float, input: str | np.ndarray | Image.Image) -> Image.I
         contrastmatrix = create_contrast_matrix(matrix_create(input))
     elif type(input) == np.ndarray:
         contrastmatrix = create_contrast_matrix(input)
-    width = contrastmatrix.shape[0]
-    height = contrastmatrix.shape[1]
+    width = contrastmatrix.shape[1]
+    height = contrastmatrix.shape[0]
     res = PIL.Image.new(mode = "RGB", size = (width, height), color = (255, 255, 255))
     res_pixels = PIL_load(res)
     for x in range(width):
         for y in range(height):
-            if contrastmatrix[x, y] >= threshold:
+            if contrastmatrix[y, x] >= threshold:
                 res_pixels[x, y] = (0, 0, 0)
     return res
 
@@ -562,6 +563,182 @@ def SimplifyColorV5(input: str | np.ndarray | Image.Image) -> Image.Image:
     return res
 
 
+def is_inside(x, y, matrix, dcount):
+    """ ### Checks if the given pixel is covered by borders in the image, True if covered, False if not, used for fill object"""
+    if matrix[y, x] == (0,0,0):
+        return True
+    f = int(round(dcount/8, 0))
+    for xi in range(-f, 1 + f):
+        for yi in range(-f, 1 + f):
+            xcheck = x
+            ycheck = y
+            while True:
+                if (xi == 0 and yi == 0) or (yi!= 0 and xi/yi == 1 and not (xi == 1 or xi  == -1)):
+                    break
+                xcheck += xi
+                ycheck += yi
+                try:
+                    a = matrix[ycheck, xcheck] == (0,0,0)
+                except IndexError:
+                    #print('image edge', (xcheck, ycheck), 'reached on direction:', (xi, yi))
+                    return False 
+                if matrix[ycheck, xcheck] == (0,0,0):
+                    #print('border', (xcheck, ycheck), 'found on direction:', (xi, yi))
+                    break
+                if xcheck < 0 or ycheck < 0:
+                    #print('image edge', (xcheck, ycheck), 'reached on direction:', (xi, yi))
+                    return False
+    return True
+
+def is_inside_simplified(x, y, simplifiedmatrix, dcount):
+    """ ### Checks if the given pixel is covered by borders in the image, True if covered, False if not, used for fill object"""
+    if simplifiedmatrix[y, x] == 1:
+        return True
+    f = int(round(dcount/8, 0))
+    for xi in range(-f, 1 + f):
+        for yi in range(-f, 1 + f):
+            xcheck = x
+            ycheck = y
+            while True:
+                if (xi == 0 and yi == 0) or (yi!= 0 and xi/yi == 1 and not (xi == 1 or xi  == -1)):
+                    break
+                xcheck += xi
+                ycheck += yi
+                try:
+                    a = simplifiedmatrix[ycheck, xcheck] == 1
+                except IndexError:
+                    #print('image edge', (xcheck, ycheck), 'reached on direction:', (xi, yi))
+                    return False 
+                if simplifiedmatrix[ycheck, xcheck] == 1:
+                    #print('border', (xcheck, ycheck), 'found on direction:', (xi, yi))
+                    break
+                if xcheck < 0 or ycheck < 0:
+                    #print('image edge', (xcheck, ycheck), 'reached on direction:', (xi, yi))
+                    return False
+    return True
+
+def Fill_Object(input: str | np.ndarray | Image.Image, dcount: int = 8) -> Image.Image:
+    """ ### Applies the [Fill Object](https://www.github.com/EgeEken/Fill-Object) algorithm to the given image
+    Takes a black and white image and a direction count as input, and fills hollow objects with black by checking in {dcount, 8 by default} directions around each pixel to see if they are covered.
+    
+    Usage: \n
+        `img = PIL_open("image.png")` \n
+        `matrix = matrix_create(img)` \n
+        `filled = fill_object("image.png")` \n
+        `filled_16d = fill_object(img, 16)` \n
+        `filled_4d = fill_object(matrix, 4)` \n
+        `save(filled_4d, "image_filled_4d")` \n
+    """
+    if type(input) == str:
+        matrix = matrix_create(PIL_open(input))
+    elif type(input) == Image.Image:
+        matrix = matrix_create(input)
+    elif type(input) == np.ndarray:
+        matrix = input
+    width = matrix.shape[1]
+    height = matrix.shape[0]
+    res = PIL.Image.new(mode = "RGB", size = (width, height), color = (255, 255, 255))
+    res_pixels = PIL_load(res)
+    for x in range(width):
+        for y in range(height):
+            if is_inside(x,y, matrix, dcount):
+                res_pixels[x, y] = (0,0,0)
+    return res
+
+
+def is_grain(simplifiedmatrix, x, y):
+    """ ### Checks if the given pixel is a grain, used for grain detection"""
+    if simplifiedmatrix[y, x] == 0:
+        return False
+    neighbors = around(simplifiedmatrix, x, y)
+    for c in neighbors:
+        if c == 1:
+            return False
+    return True
+
+def Detect_Object(input: str | np.ndarray | Image.Image, threshold: int, dcount: int = 8, autobackground: bool = True, backcolor: tuple = None, graindetection: bool = False) -> Image.Image:
+    """ ### Applies the [Detect Object](https://www.github.com/EgeEken/Detect-Object) algorithm to the given image
+    Takes an image, a threshold for the Simplify algorithm, a direction count for the Fill Object algorithm as input, a bool for automatic background color (true by default), a background color tuple (None by default) and a grain detection bool (false by default)
+    
+    Returns an image where the background has been cropped, replaced by the background color (either automatically found or given) and the object is in focus.
+    
+    Usage: \n
+        `img = PIL_open("image.png")` \n
+        `matrix = matrix_create(img)` \n
+        `detected = Detect_Object("image.png", 100)` \n
+        `detected_16d = Detect_Object(img, 100, 16)` \n
+        `detected_4d_red_bg = Detect_Object(matrix, 100, 4, False, (255, 0, 0))` \n
+        `save(detected_4d, "image_detected_4d")` \n
+    """
+    if type(input) == str:
+        matrix = matrix_create(PIL_open(input))
+    elif type(input) == Image.Image:
+        matrix = matrix_create(input)
+    elif type(input) == np.ndarray:
+        matrix = input
+    width = matrix.shape[1]
+    height = matrix.shape[0]
+    
+    simplifiedmatrix = create_contrast_matrix(matrix)
+    for x in range(width):
+        for y in range(height):
+            if simplifiedmatrix[y, x] >= threshold:
+                simplifiedmatrix[y, x] = 1
+            else:
+                simplifiedmatrix[y, x] = 0
+    
+    resmatrix = np.zeros((height, width), dtype=np.uint8)
+    if autobackground:
+        backtemp = np.array([0, 0, 0], dtype=np.uint8)
+        backcount = 0
+        if graindetection:
+            for x in range(width):
+                for y in range(height):
+                    if simplifiedmatrix[y, x] == 1 or (is_inside_simplified(x, y, simplifiedmatrix, dcount) and not is_grain(simplifiedmatrix, x, y)):
+                        resmatrix[y, x] = 1
+                    else:
+                        resmatrix[y, x] = 0
+                        backtemp += np.array([matrix[y, x][0], matrix[y, x][1], matrix[y, x][2]], dtype=np.uint8)
+                        backcount += 1
+
+        else:
+            for x in range(width):
+                for y in range(height):
+                    if simplifiedmatrix[y, x] == 1 or is_inside_simplified(x, y, simplifiedmatrix, dcount):
+                        resmatrix[y, x] = 1
+                    else:
+                        resmatrix[y, x] = 0
+                        backtemp += np.array([matrix[y, x][0], matrix[y, x][1], matrix[y, x][2]], dtype=np.uint8)
+                        backcount += 1
+                
+        backcolor = tuple(backtemp // backcount)
+        
+    else:
+        if graindetection:
+            for x in range(width):
+                for y in range(height):
+                    if simplifiedmatrix[y, x] == 1 or (is_inside_simplified(x, y, simplifiedmatrix, dcount) and not is_grain(simplifiedmatrix, x, y)):
+                        resmatrix[y, x] = 1
+                    else:
+                        resmatrix[y, x] = 0
+
+        else:
+            for x in range(width):
+                for y in range(height):
+                    if simplifiedmatrix[y, x] == 1 or is_inside_simplified(x, y, simplifiedmatrix, dcount):
+                        resmatrix[y, x] = 1
+                    else:
+                        resmatrix[y, x] = 0
+    
+    res = PIL.Image.new(mode = "RGB", size = (width, height), color = backcolor)
+    res_pixels = PIL_load(res)
+    for x in range(width):
+        for y in range(height):
+            if resmatrix[y, x] == 1:
+                res_pixels[x, y] = matrix[y, x]
+            else:
+                res_pixels[x, y] = backcolor
+    return res
 
 
 
@@ -580,7 +757,7 @@ def ReadVideo(filename: str, extension: str = "mp4") -> list:
             break
     return res
 
-def WriteVideo(filename: str, frames: list, fps: int, extension: str = 'mp4', format: str = "mp4v"):
+def WriteVideo(filename: str, frames: list, fps: int = 30, extension: str = 'mp4', format: str = "mp4v"):
     """ ### Writes a list of frames to a video file"""
     size = frames[0].shape[:2][::-1]
     if filename[-3:] == extension:
@@ -615,23 +792,6 @@ def BnW_Video(filename: str, extension: str = "mp4") -> list:
         ret, frame = cap.read()
         if ret:
             res.append(cv2.cvtColor(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), cv2.COLOR_GRAY2BGR))
-        else:
-            break
-    return res
-
-def Create_Training_Matrix(filename: str, framecount: int, width: int, height: int, extension: str = "mp4") -> np.ndarray:
-    """ ### Creates a training data matrix of the given video file for a neural network"""
-    if filename[-3:] == extension:
-        cap = cv2.VideoCapture(filename)
-    else:
-        cap = cv2.VideoCapture(filename + "." + extension)
-    res = np.zeros((framecount, width * height), dtype = np.uint8)
-    i = 0
-    while True:
-        ret, frame = cap.read()
-        if ret:
-            res[i] = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY).reshape(width * height)
-            i += 1
         else:
             break
     return res
@@ -711,3 +871,116 @@ def SimplifyVideo(filename: str | list, threshold: float, extension: str = "mp4"
         for i in range(len(filename)):
             res.append(Simplify_cv2(filename[i], threshold))
         return res
+     
+def DownsizeVideo(filename: str | list, newwidth: int, newheight: int, extension: str = "mp4") -> list:
+    """ ### Downsizes the given video file to the given width and height and returns a cv2 video list"""
+    if type(filename) == str:
+        if filename[-3:] == extension:
+            cap = cv2.VideoCapture(filename)
+        else:
+            cap = cv2.VideoCapture(filename + "." + extension)
+        res = []
+        while True:
+            ret, frame = cap.read()
+            if ret:
+                res.append(cv2.resize(frame, (newwidth, newheight)))
+            else:
+                break
+        return res
+    elif type(filename) == list:
+        res = []
+        for i in range(len(filename)):
+            res.append(cv2.resize(filename[i], (newwidth, newheight)))
+        return res
+
+def Downsize_cv2(img: np.ndarray, newwidth: int, newheight: int) -> np.ndarray:
+    """ ### Downsizes the given cv2 image to the given width and height and returns a cv2 image"""
+    return cv2.resize(img, (newwidth, newheight))
+
+def BnW_cv2(img: np.ndarray) -> np.ndarray:
+    """ ### Converts the given cv2 image to black and white and returns a cv2 image"""
+    return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+def Create_Training_Matrix(filename: str, extension: str = "mp4") -> np.ndarray:
+    """ ### Creates a training data matrix of the given video file for a neural network"""
+    if filename[-3:] == extension:
+        cap = cv2.VideoCapture(filename)
+    else:
+        cap = cv2.VideoCapture(filename + "." + extension)
+    framecount = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    width  = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    res = np.zeros((framecount, width * height), dtype = np.uint8)
+    i = 0
+    while True:
+        ret, frame = cap.read()
+        if ret:
+            res[i] = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY).reshape(width * height)
+            i += 1
+        else:
+            break
+    return res
+
+def Training_Matrix_cv2(img: np.ndarray) -> np.ndarray:
+    """ ### Creates a training data matrix of the given cv2 image for a neural network"""
+    width = img.shape[1]
+    height = img.shape[0]
+    return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY).reshape(width * height)
+
+def Training_Matrix_cv2_GRAY(img: np.ndarray) -> np.ndarray:
+    """ ### Creates a training data matrix of the given cv2 image for a neural network"""
+    return img.reshape(img.shape[1] * img.shape[0])
+
+def Create_Downsized_Training_Matrix(filename: str, newwidth: int, newheight: int, extension: str = "mp4") -> np.ndarray:
+    """ ### Creates a training data matrix of a downsized version of the given video file for a neural network"""
+    if filename[-3:] == extension:
+        cap = cv2.VideoCapture(filename)
+    else:
+        cap = cv2.VideoCapture(filename + "." + extension)
+    framecount = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    res = np.zeros((framecount, newwidth * newheight), dtype = np.uint8)
+    i = 0
+    while True:
+        ret, frame = cap.read()
+        if ret:
+            res[i] = cv2.cvtColor(cv2.resize(frame, (newwidth, newheight)), cv2.COLOR_BGR2GRAY).reshape(newwidth * newheight)
+            i += 1
+        else:
+            break
+    
+    return res
+
+def Create_Downsized_Training_Video(filename: str, newwidth: int, newheight: int, extension: str = "mp4") -> list:
+    """ ### Create_Downsized_Training_Matrix but returns a cv2 video list to be written so that it can be played"""
+    if filename[-3:] == extension:
+        cap = cv2.VideoCapture(filename)
+    else:
+        cap = cv2.VideoCapture(filename + "." + extension)
+    res = []
+    while True:
+        ret, frame = cap.read()
+        if ret:
+            res.append(cv2.cvtColor(cv2.cvtColor(cv2.resize(frame, (newwidth, newheight)), cv2.COLOR_BGR2GRAY), cv2.COLOR_GRAY2BGR))
+        else:
+            break
+    return res
+
+def ReadScreen() -> np.ndarray:
+    """ ### Returns the current screen as a cv2 image"""
+    return np.array(ImageGrab.grab(bbox=None), dtype=np.uint8)
+
+def ReadDownsizedScreen(newwidth: int, newheight: int) -> np.ndarray:
+    """ ### Downsizes and returns the current screen as a cv2 image"""
+    return cv2.resize(ReadScreen(), (newwidth, newheight))
+
+def ReadBnWScreen() -> np.ndarray:
+    """ ### Returns the current screen as a cv2 image in black and white"""
+    return cv2.cvtColor(cv2.cvtColor(ReadScreen(), cv2.COLOR_BGR2GRAY), cv2.COLOR_GRAY2BGR)
+
+def ReadDownsizedBnWScreen(newwidth: int, newheight: int) -> np.ndarray:
+    """ ### Downsizes and returns the current screen as a cv2 image in black and white"""
+    return cv2.cvtColor(cv2.resize(ReadScreen(), (newwidth, newheight)), cv2.COLOR_BGR2GRAY)
+
+def ScreenMatrix_mc() -> np.ndarray:
+    """ ### Returns the current screen as a training matrix for my minecraft player neural network"""
+    return Training_Matrix_cv2_GRAY(ReadDownsizedBnWScreen(640, 360))

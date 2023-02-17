@@ -24,8 +24,5 @@ Optimized and improved versions of my image processing programs included:
 - [Simplify Color V4 and V5](https://github.com/EgeEken/Simplify-Color)
 - [Brighten](https://github.com/EgeEken/Brighten), [Saturate](https://github.com/EgeEken/Saturate)
 - [Simplify Video](https://github.com/EgeEken/Simplify-Video)
-
-To be added:
-
 - [Fill Object](https://github.com/EgeEken/Fill-Object)
 - [Detect Object](https://github.com/EgeEken/Detect-Object)
