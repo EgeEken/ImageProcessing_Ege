@@ -841,14 +841,14 @@ def Simplify_cv2(img: np.ndarray, threshold: float) -> np.ndarray:
     """ ### Simplifies the given cv2 image by the given threshold and returns a cv2 image"""
     width = img.shape[1]
     height = img.shape[0]
-    res = np.zeros((width, height, 3), dtype = np.uint8)
+    res = np.zeros((height, width, 3), dtype = np.uint8)
     contrastmatrix = create_contrast_matrix_cv2(img)    
     for x in range(width):
         for y in range(height):
             if contrastmatrix[x, y] >= threshold:
-                res[x, y] = np.array([0, 0, 0], dtype=np.uint8)
+                res[y, x] = np.array([0, 0, 0], dtype=np.uint8)
             else:
-                res[x, y] = np.array([255, 255, 255], dtype=np.uint8)
+                res[y, x] = np.array([255, 255, 255], dtype=np.uint8)
     return res
 
 def SimplifyVideo(filename: str | list, threshold: float, extension: str = "mp4") -> list:
