@@ -18,6 +18,8 @@ Current features:
 - Functions to turn PIL image objects into numpy matrices for faster processing
 - Function to turn images into 1d arrays of normalized black and white versions of them with pixel values between 0 and 1 for neural network training 
 - Functions to read and write videos using the opencv library (cv2) and also to create them using tuple RGB matrixes used in and created by the other functions, and vice versa allowing for frames from the videos read by opencv to be treated and processed by PIL and numpy
+- Functions to read the current screen and save it as a matrix (primary use case is real time automated reactions to the monitor)
+
 
 Optimized and improved versions of my image processing programs included: 
 - [Simplify](https://github.com/EgeEken/Simplify)
