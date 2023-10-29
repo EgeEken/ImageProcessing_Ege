@@ -31,3 +31,4 @@ Optimized and improved versions of my image processing programs included:
 - [Simplify Video](https://github.com/EgeEken/Simplify-Video)
 - [Fill Object](https://github.com/EgeEken/Fill-Object)
 - [Detect Object](https://github.com/EgeEken/Detect-Object)
+- [Movement Tracker](https://github.com/EgeEken/Movement-Tracker)
