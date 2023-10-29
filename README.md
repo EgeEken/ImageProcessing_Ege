@@ -7,7 +7,10 @@ Install steps:
 
 1-) Download and install [Git](https://git-scm.com/downloads)
 
-2-) Run `pip install "git+"https://github.com/EgeEken/ImageProcessing_Ege""` in the terminal
+2-) Run the following command in the command terminal
+```bash
+pip install "git+"https://github.com/EgeEken/ImageProcessing_Ege""
+```
 
 3-) Use `from ImageProcessing_Ege import imgpro` in a python script or runtime (`from ImageProcessing_Ege import imgpro as (prefix)` if you don't want to write the whole thing every time)
 
