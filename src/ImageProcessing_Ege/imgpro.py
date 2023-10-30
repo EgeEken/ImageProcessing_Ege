@@ -3,6 +3,7 @@ from PIL import Image
 from PIL import ImageGrab
 import numpy as np
 import time
+import copy
 import math
 import random
 import cv2
@@ -796,6 +797,17 @@ def BnW_Video(filename: str, extension: str = "mp4") -> list:
             break
     return res
 
+def BnW_cv2_usable(frame: np.ndarray) -> np.ndarray:
+    """ ### Converts a cv2 frame to a black and white frame"""
+    return cv2.cvtColor(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), cv2.COLOR_GRAY2BGR)
+
+def BnWtoBGR(frames: list) -> list:
+    """ ### Converts a list of black and white frames to a list of BGR frames"""
+    res = []
+    for i in range(len(frames)):
+        res.append(cv2.cvtColor(frames[i], cv2.COLOR_GRAY2BGR))
+    return res
+
 def distance_cv2(c1: np.ndarray, c2: np.ndarray) -> float:
     """ ### Returns the distance between two colors in RGB space, takes 2 cv2 colors instead of two tuples. 
     Returns a float
@@ -836,6 +848,209 @@ def create_contrast_matrix_cv2(matrix: np.ndarray) -> np.ndarray:
         for y in range(height):
             res[y, x] = check_contrast_cv2(matrix, y, x)
     return res
+
+def contrast_video_seizure(video: list | str, extension: str = "mp4") -> list:
+    """ ### Returns a new video where each frame is the difference between the current frame and the previous frame
+    SEIZURE VERSION, USE WITH CAUTION
+    
+    Usage: \n
+        `video = ReadVideo("video.mp4")` \n
+        `contrast_video = contrast_video(video)` \n   
+        `contrast_video = contrast_video("video.mp4")` \n
+    """
+    if type(video) == str:
+        if video[-3:] == extension:
+            cap = cv2.VideoCapture(video)
+        else:
+            cap = cv2.VideoCapture(video + "." + extension)
+        res = []
+        while True:
+            ret, frame = cap.read()
+            if ret:
+                try:
+                    res.append(frame - res[-1])
+                except IndexError:
+                    res.append(frame)
+            else:
+                break
+        return res[1, :]
+    elif type(video) == list:
+        res = []
+        for i in range(1, len(video)):
+            res.append(video[i] - video[i - 1])
+        return res
+    
+def contrast_video(video: list | str, extension: str = "mp4") -> list:
+    """ ### Returns a new video where each frame is the difference between the current frame and the previous frame
+    
+    Usage: \n
+        `video = ReadVideo("video.mp4")` \n
+        `contrast_video = contrast_video(video)` \n   
+        `contrast_video = contrast_video("video.mp4")` \n
+    """
+    if type(video) == str:
+        if video[-3:] == extension:
+            cap = cv2.VideoCapture(video)
+        else:
+            cap = cv2.VideoCapture(video + "." + extension)
+        res = []
+        while True:
+            ret, frame = cap.read()
+            if ret:
+                try:
+                    res.append(cv2.subtract(frame, res[-1]))
+                except IndexError:
+                    res.append(frame)
+            else:
+                break
+        return res[1, :]
+    elif type(video) == list:
+        res = []
+        for i in range(1, len(video)):
+            res.append(cv2.subtract(video[i], video[i - 1]))
+        return res
+    
+def contrast_video_bnw(video: list | str, extension: str = "mp4") -> list:
+    """ ### Returns a new video where each frame is the difference between the current frame and the previous frame, converted to black and white
+    
+    Usage: \n
+        `video = ReadVideo("video.mp4")` \n
+        `contrast_video = contrast_video(video)` \n   
+        `contrast_video = contrast_video("video.mp4")` \n
+    """
+    if type(video) == str:
+        if video[-3:] == extension:
+            cap = cv2.VideoCapture(video)
+        else:
+            cap = cv2.VideoCapture(video + "." + extension)
+        res = []
+        while True:
+            ret, frame = cap.read()
+            if ret:
+                try:
+                    res.append(cv2.subtract(BnW_cv2_usable(frame), BnW_cv2_usable(res[-1])))
+                except IndexError:
+                    res.append(frame)
+            else:
+                break
+        return res[1, :]
+    elif type(video) == list:
+        res = []
+        for i in range(1, len(video)):
+            res.append(cv2.subtract(BnW_cv2_usable(video[i]), BnW_cv2_usable(video[i-1])))
+        return res
+    
+def mass_center_cv2(matrix: np.ndarray) -> tuple:
+    """ ### Returns the center of mass of the given matrix (needs to be black and white)
+    Used for object/movement tracking
+    """
+    trans = np.transpose(matrix)
+    width = matrix.shape[1]
+    height = matrix.shape[0]
+    xsum = 0
+    ysum = 0
+    xcount = 0
+    ycount = 0
+    for x in range(width):
+        temp = trans[x].sum()
+        xcount += temp
+        xsum += temp * x
+    for y in range(height):
+        temp = matrix[y].sum()
+        ycount += temp
+        ysum += temp * y
+    if xcount == 0 or ycount == 0:
+        return (0, 0)
+    return (int(round(xsum/xcount, 0)), int(round(ysum/ycount, 0)))
+
+def mass_center_cv2_threshold(matrix: np.ndarray, threshold: int) -> tuple:
+    """ ### Returns the center of mass of the given matrix (needs to be black and white)
+    Used for object/movement tracking
+    """
+    trans = np.transpose(matrix*(matrix>threshold))
+    matrix = matrix*(matrix>threshold)
+    width = matrix.shape[1]
+    height = matrix.shape[0]
+    xsum = 0
+    ysum = 0
+    xcount = 0
+    ycount = 0
+    for x in range(width):
+        temp = trans[x].sum()
+        xcount += temp
+        xsum += temp * x
+    for y in range(height):
+        temp = matrix[y].sum()
+        ycount += temp
+        ysum += temp * y
+    if xcount == 0 or ycount == 0:
+        return (0, 0)
+    return (int(round(xsum/xcount, 0)), int(round(ysum/ycount, 0)))
+
+def movement_tracker_cv2(video: list | str, extension: str = "mp4") -> list:
+    """ ### Tracks the movement in the video, places a red dot on the center of mass of the movement"""
+    if type(video) == str:
+        if video[-3:] == extension:
+            cap = cv2.VideoCapture(video)
+        else:
+            cap = cv2.VideoCapture(video + "." + extension)
+        res = []
+        while True:
+            ret, frame = cap.read()
+            if ret:
+                try:
+                    center = mass_center_cv2(BnW_cv2(cv2.subtract(frame, res[-1])))
+                    cv2.circle(frame, center, 5, (0, 0, 255), -1)
+                    cv2.circle(frame, center, 2, (255,255,255), -1)
+                    res.append(frame)
+                except IndexError:
+                    res.append(frame)
+            else:
+                break
+        return res[1,:]
+    elif type(video) == list:
+        video = copy.deepcopy(video)
+        res = []
+        for i in range(1, len(video)):
+            #print("frame", i, "of", len(video))
+            center = mass_center_cv2(BnW_cv2(cv2.subtract(video[i], video[i - 1])))
+            cv2.circle(video[i], center, 5, (0, 0, 255), -1)
+            cv2.circle(video[i], center, 2, (255,255,255), -1)
+            res.append(video[i])
+        return res
+    
+def movement_tracker_cv2_threshold(video: list | str, threshold: int = 128, extension: str = "mp4") -> list:
+    """ ### Tracks the movement in the video, places a red dot on the center of mass of the movement"""
+    if type(video) == str:
+        if video[-3:] == extension:
+            cap = cv2.VideoCapture(video)
+        else:
+            cap = cv2.VideoCapture(video + "." + extension)
+        res = []
+        while True:
+            ret, frame = cap.read()
+            if ret:
+                try:
+                    center = mass_center_cv2_threshold(BnW_cv2(cv2.subtract(frame, res[-1])), threshold)
+                    cv2.circle(frame, center, 5, (0, 0, 255), -1)
+                    cv2.circle(frame, center, 2, (255,255,255), -1)
+                    res.append(frame)
+                except IndexError:
+                    res.append(frame)
+            else:
+                break
+        return res[1,:]
+    elif type(video) == list:
+        video = copy.deepcopy(video)
+        res = []
+        for i in range(1, len(video)):
+            #print("frame", i, "of", len(video))
+            center = mass_center_cv2_threshold(BnW_cv2(cv2.subtract(video[i], video[i - 1])), threshold)
+            cv2.circle(video[i], center, 5, (0, 0, 255), -1)
+            cv2.circle(video[i], center, 2, (255,255,255), -1)
+            res.append(video[i])
+        return res
+    
     
 def Simplify_cv2(img: np.ndarray, threshold: float) -> np.ndarray:
     """ ### Simplifies the given cv2 image by the given threshold and returns a cv2 image"""
@@ -948,7 +1163,7 @@ def Create_Downsized_Training_Matrix(filename: str, newwidth: int, newheight: in
         else:
             break
     
-    return res
+    return res.T
 
 def Create_Downsized_Training_Video(filename: str, newwidth: int, newheight: int, extension: str = "mp4") -> list:
     """ ### Create_Downsized_Training_Matrix but returns a cv2 video list to be written so that it can be played"""
